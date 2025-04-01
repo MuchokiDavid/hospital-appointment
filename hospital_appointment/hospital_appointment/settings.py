@@ -25,8 +25,50 @@ SECRET_KEY = "django-insecure-0u%pipcxfalfc$nfep$+@w@$b67)4m)sg_$18+-^(46217r3=j
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# ---------Security---------------------------------------------------------------
 ALLOWED_HOSTS = ['*']
+CORS_ALLOWED_ORIGINS: True
 
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://localhost:8000",
+    "http://192.168.1.15:5173",
+]
+CORS_ALLOW_HEADERS = [
+    'content-type',
+    'authorization',  
+    'x-api-key',  
+    'accept',
+    'origin',
+    'x-custom-header',  
+    'X-Frame-Options',  
+    'x-frontend-host'
+]
+CORS_ORIGIN_WHITELIST = [
+    'http://localhost:5173',  
+    "http://192.168.1.15:5173",
+]
+
+# session _key
+SESSION_COOKIE_AGE = 3600  # Log out after 1 hr of inactivity (
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Log out when the browser closes
+
+SESSION_COOKIE_SECURE = False  # Set to True if using HTTPS
+SESSION_COOKIE_SAMESITE = 'Lax'  # For cross-site cookies
+CSRF_COOKIE_SAMESITE = 'Lax'  # For CSRF cookies if using CSRF protection
+CSRF_COOKIE_SECURE = False  # Set to True if using HTTPS
+
+CSRF_COOKIE_HTTPONLY = True  # Recommended for security
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://0.0.0.0:8080", 
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:8080",
+]
 
 # Application definition
 
@@ -37,10 +79,13 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    'corsheaders',
+    'rest_framework',
     'appointmentapp'
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -48,9 +93,14 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = "hospital_appointment.urls"
+
+STATIC_URL = "static/"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 TEMPLATES = [
     {
@@ -69,7 +119,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "hospital_appointment.wsgi.application"
-
+AUTH_USER_MODEL = "appointmentapp.User"
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -77,7 +127,7 @@ WSGI_APPLICATION = "hospital_appointment.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": BASE_DIR / "appointment.db",
     }
 }
 
