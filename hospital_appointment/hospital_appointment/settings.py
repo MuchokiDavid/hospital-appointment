@@ -72,6 +72,15 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8080",
 ]
 
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -122,6 +131,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "hospital_appointment.wsgi.application"
 AUTH_USER_MODEL = "users.User"
+LOGIN_URL = '/login'
 
 # AUTHENTICATION_BACKENDS = [
 #     'oauth2_provider.backends.OAuth2Backend',
@@ -181,8 +191,44 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+
+# REST_FRAMEWORK= {
+#     'DEFAULT_AUTHENTICATION_CLASSES': [
+#         'rest_framework.authentication.BasicAuthentication',
+#         'rest_framework.authentication.SessionAuthentication',
+#     ]
+# }
+
+# Allow anyone
+# REST_FRAMEWORK= {
+#     'DEFAULT_AUTHENTICATION_CLASSES': [
+#         'rest_framework.permission.AllowAny',
+#     ]
+# }
+
+OAUTH2_PROVIDER = {
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 3600,  # Token expiry time (1 hour)
+    'REFRESH_TOKEN_EXPIRE_SECONDS': 86400,  # Refresh token expiry time (1 day)
+    'SCOPES': {
+        'read': 'Read access',
+        'write': 'Write access',
+        'groups': 'Access to your groups'
+    }
+}
+
+
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
     ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        # 'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
+    )
 }
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+
