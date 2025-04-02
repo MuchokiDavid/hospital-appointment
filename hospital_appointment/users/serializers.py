@@ -1,6 +1,6 @@
 from .models import *
 from rest_framework import serializers
-from django.contrib.auth.models import User
+# from django.contrib.auth.models import User
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -10,10 +10,7 @@ class UserSerializer(serializers.ModelSerializer):
                         'email': {"required": True},
                         'user_type': {"required": True},
                         'phone_number': {"required": True},
-                        'date_of_birth': {"required": True},
-                        'profile_picture': {"required": True},
-                        'first_name': {"required": True},
-                        'last_name': {"required": True},
+                        'username': {"required": True},
                     }
         
     # Function to harsh password
