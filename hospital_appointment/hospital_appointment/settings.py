@@ -50,6 +50,8 @@ CORS_ALLOW_HEADERS = [
 CORS_ORIGIN_WHITELIST = [
     'http://localhost:5173',  
     "http://192.168.1.15:5173",
+    "http://0.0.0.0:8000", 
+    "http://localhost:8000",
 ]
 
 # session _key
@@ -65,7 +67,7 @@ CSRF_COOKIE_HTTPONLY = True  # Recommended for security
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
-    "http://0.0.0.0:8080", 
+    "http://localhost:8000", 
     "http://127.0.0.1:8000",
     "http://127.0.0.1:8080",
 ]
@@ -80,27 +82,27 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     'corsheaders',
+    'oauth2_provider',
     'rest_framework',
-    'appointmentapp'
+    'appointmentapp',
+    'users',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     "django.middleware.common.CommonMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'oauth2_provider.middleware.OAuth2TokenMiddleware',
 ]
 
 ROOT_URLCONF = "hospital_appointment.urls"
-
-STATIC_URL = "static/"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-STATIC_ROOT = BASE_DIR / "staticfiles"
 
 TEMPLATES = [
     {
@@ -119,7 +121,11 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "hospital_appointment.wsgi.application"
-AUTH_USER_MODEL = "appointmentapp.User"
+AUTH_USER_MODEL = "users.User"
+
+# AUTHENTICATION_BACKENDS = [
+#     'oauth2_provider.backends.OAuth2Backend',
+# ]
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -156,7 +162,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Africa/Nairobi"
 
 USE_I18N = True
 
@@ -167,8 +173,16 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+    ),
+}
