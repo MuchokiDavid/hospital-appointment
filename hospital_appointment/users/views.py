@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import User, Doctor, Patient, Specialization
+from .models import UserDetails, Doctor, Patient, Specialization
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -32,13 +32,13 @@ class RegisterUser(APIView):
             if not username or not password or not email or not phone_number or not user_type:
                 return Response({'message': 'Please provide all the required fields'}, status=status.HTTP_400_BAD_REQUEST)
             
-            if User.objects.filter(username=username).exists():
+            if UserDetails.objects.filter(username=username).exists():
                 return Response({'message': 'Username already exists'}, status=status.HTTP_400_BAD_REQUEST)
             
-            if User.objects.filter(email=email).exists():
+            if UserDetails.objects.filter(email=email).exists():
                 return Response({'message': 'Email already exists'}, status=status.HTTP_400_BAD_REQUEST)
             
-            if User.objects.filter(phone_number=phone_number).exists():
+            if UserDetails.objects.filter(phone_number=phone_number).exists():
                 return Response({'message': 'Phone number already exists'}, status=status.HTTP_400_BAD_REQUEST)
             
             serializer = UserSerializer(data=request.data)
@@ -140,6 +140,60 @@ class Logout(APIView):
         logout(request)
         return Response({'message': 'Logged out successfully'})
     
+
+# Get user list while authenticated-----------------------------------------------
+class UserList(APIView):
+    authentication_classes= [OAuth2Authentication]
+    permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
+
+    def get(self, request, format=None):
+        users = UserDetails.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
+
+# Hospital staff manage user profile------------------------------------------
+class StaffViewUserById(APIView):
+    authentication_classes= [OAuth2Authentication]
+    permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
+
+    def get(self, request, id, format=None):
+        try:
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            if user.user_type != 'DOCTOR' and user.user_type != 'ADMIN':
+                return Response({'message': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)                            
+            
+            current_user = UserDetails.objects.get(id=id)
+            serializer = UserSerializer(current_user)
+            return Response(serializer.data)
+        except UserDetails.DoesNotExist:
+            return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+    def put(self, request, id, format=None):
+        try:
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            if user.user_type != 'DOCTOR' and user.user_type != 'ADMIN':
+                return Response({'message': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+
+            current_user = UserDetails.objects.get(id=id)
+            serializer = UserSerializer(current_user, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except UserDetails.DoesNotExist:
+            return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+class Redirect(APIView):
+    def get(self, request, format=None):
+        return Response({'message': 'Hospital Appointment System!'})
+
+# Get specializations--------------------------------------------------------------
 class GetSpecializationsView(APIView):    
     def get(self, request, format=None):
         try:
@@ -148,7 +202,8 @@ class GetSpecializationsView(APIView):
             return Response(serializer.data)
         except Exception as e:
             return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    
+
+#Add specialization -----------------------------------------------------------------
 class PostSpecializationView(APIView):
     authentication_classes= [OAuth2Authentication]
     permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]            
@@ -165,7 +220,7 @@ class PostSpecializationView(APIView):
         except Exception as e:
             return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
-
+# Doctor profile view-----------------------------------------------------------------
 class DoctorProfileView(APIView):
     authentication_classes= [OAuth2Authentication]
     permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
@@ -195,28 +250,117 @@ class DoctorProfileView(APIView):
         except Exception as e:
             return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+# Add patient while authenticated as Admin or Doctor-------------------------------
 class RegisterPatient(APIView):
     authentication_classes= [OAuth2Authentication]
     permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
     
     def post(self, request, format=None):
-        serializer = PatientSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+        user= request.user
+        if not user:
+            return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if user.user_type != 'DOCTOR' and user.user_type != 'ADMIN':
+            return Response({'message': 'User is not a doctor or an admin'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if user.user_type == 'PATIENT':
+            return Response({'message': 'User is already a patient'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        data= request.data
+        user_type= 'PATIENT'
+        phone_number= data.get('phone_number')
+        dob= data.get('date_of_birth')
+        email= data.get('email')
+        first_name= data.get('first_name')
+        last_name= data.get('last_name')
+        gender= data.get('gender')
+        address= data.get('address')
+        insuarance_provider= data.get('insuarance_provider')
+        insuarance_policy= data.get('insuarance_policy')
+        address= data.get('address')
+        emergency_contact_name= data.get('emergency_contact_name')
+        emergency_contact_phone= data.get('emergency_contact_phone')
+        
+        if not phone_number or not email:
+            return Response({'message': 'Please provide phone number and email'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        new_user= UserDetails.objects.create(username=phone_number, 
+                                      email=email, 
+                                      phone_number=phone_number, 
+                                      user_type=user_type,
+                                      first_name=first_name,
+                                      last_name=last_name,
+                                      date_of_birth= dob,
+                                      )
+        
+        patient= None
+        if new_user:
+            patient= Patient.objects.filter(user=new_user).first()
+            patient.gender= gender
+            patient.address= address
+            patient.emergency_contact_name= emergency_contact_name
+            patient.emergency_contact_phone=  emergency_contact_phone
+            patient.insurance_policy_number= insuarance_policy
+            patient.insurance_provider= insuarance_provider
+            patient.save()
+            
+        res= {'message': 'Patient registered successfully', 'patient': PatientSerializer(patient).data}
+        return Response(res, status=status.HTTP_201_CREATED)
 
-# Create your views here.
-class UserList(APIView):
+#Get all patients ---------------------------------------------------------------------
+class PatientListView(APIView):
     authentication_classes= [OAuth2Authentication]
     permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
 
     def get(self, request, format=None):
-        users = User.objects.all()
-        serializer = UserSerializer(users, many=True)
-        return Response(serializer.data)
+        try:
+            patients= Patient.objects.all()
+            serializer = PatientSerializer(patients, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# Staff manage patient profile--------------------------------------------------------------
+class PatientProfileView(APIView):
+    authentication_classes= [OAuth2Authentication]
+    permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
+
+    def get(self, request, id, format=None):
+        try:
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            if user.user_type != 'DOCTOR' and user.user_type != 'ADMIN':
+                return Response({'message': 'User is not a doctor or an admin'}, status=status.HTTP_400_BAD_REQUEST)            
+            
+            patient= Patient.objects.filter(id=id).first()
+            if not patient:
+                return Response({'message': 'Patient not found'}, status=status.HTTP_404_NOT_FOUND)
+            serializer = PatientSerializer(patient)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, id, format=None):
+        try:
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            if user.user_type != 'DOCTOR' and user.user_type != 'ADMIN':
+                return Response({'message': 'User is not a doctor or an admin'}, status=status.HTTP_400_BAD_REQUEST)
+
+            patient= Patient.objects.filter(id=id).first()
+            if not patient:
+                return Response({'message': 'Patient not found'}, status=status.HTTP_404_NOT_FOUND)
+            serializer = PatientSerializer(patient, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
     
-class Redirect(APIView):
-    def get(self, request, format=None):
-        return Response({'message': 'Hello World!'})
