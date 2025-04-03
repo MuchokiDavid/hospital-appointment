@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-from users.models import Doctor, Patient, User
+from users.models import Doctor, Patient, UserDetails
 
 class AvailabilitySchedule(models.Model):
     """Doctor's availability schedule"""
@@ -122,7 +122,7 @@ class Prescription(models.Model):
 
 class Notification(models.Model):
     """System notifications for users"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    user = models.ForeignKey(UserDetails, on_delete=models.CASCADE, related_name='notifications')
     message = models.TextField()
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
