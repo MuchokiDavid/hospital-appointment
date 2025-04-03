@@ -130,7 +130,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "hospital_appointment.wsgi.application"
-AUTH_USER_MODEL = "users.User"
+AUTH_USER_MODEL = "users.UserDetails"
 LOGIN_URL = '/login'
 
 # AUTHENTICATION_BACKENDS = [
