@@ -56,7 +56,7 @@ def create_user_profile(sender, instance, created, **kwargs):
 
 class Patient(models.Model):
     """Patient profile extending the User model"""
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='patient_profile')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='patient_profile')
     GENDER_CHOICES = (
         ('M', 'Male'),
         ('F', 'Female'),
@@ -88,9 +88,9 @@ class Specialization(models.Model):
 
 class Doctor(models.Model):
     """Doctor profile extending the User model"""
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='doctor_profile')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='doctor_profile')
     specializations = models.ManyToManyField(Specialization, related_name='doctors')
-    license_number = models.CharField(max_length=50, unique=True)
+    license_number = models.CharField(max_length=50, unique=True, null=True, blank=True)
     years_of_experience = models.PositiveIntegerField(blank=True, null=True)
     hospital_affiliation = models.CharField(max_length=100, blank=True, null=True)
     biography = models.TextField(blank=True, null=True)
