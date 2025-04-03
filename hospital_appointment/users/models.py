@@ -5,29 +5,7 @@ from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-# class CustomUserManager(UserManager):
-#     def _create_user(self, email, password, **extra_fields):
-#         if not email:
-#             raise ValueError("Invalid email provided")
-        
-#         email= self.normalize_email(email)
-#         user= self.model(email=email, **extra_fields)
-#         user.set_password(password)
-#         user.save(using=self._db)
-
-#         return user
-    
-#     def create_user(self, email=None, password=None, **extra_fields):
-#         extra_fields.setdefault('is_staff', False)
-#         extra_fields.setdefault('is_superuser', False)    
-#         return self._create_user(email, password, **extra_fields)
-    
-#     def create_superuser(self, email=None, password=None, **extra_fields):
-#         extra_fields.setdefault('is_staff', True)
-#         extra_fields.setdefault('is_superuser',True)
-#         return self._create_user(email, password, **extra_fields)
-
-class User(AbstractUser):
+class UserDetails(AbstractUser):
     """Custom user model that extends Django's AbstractUser"""
     USER_TYPE_CHOICES = (
         ('PATIENT', 'Patient'),
@@ -40,12 +18,10 @@ class User(AbstractUser):
     date_of_birth = models.DateField(blank=True, null=True)
     profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
     
-    # objects= CustomUserManager()
-    
     def __str__(self):
         return f"{self.get_full_name()} ({self.user_type})"
     
-@receiver(post_save, sender=User)
+@receiver(post_save, sender=UserDetails)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         if instance.user_type == 'PATIENT':
@@ -56,7 +32,7 @@ def create_user_profile(sender, instance, created, **kwargs):
 
 class Patient(models.Model):
     """Patient profile extending the User model"""
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='patient_profile')
+    user = models.OneToOneField(UserDetails, on_delete=models.CASCADE, related_name='patient_profile')
     GENDER_CHOICES = (
         ('M', 'Male'),
         ('F', 'Female'),
@@ -88,7 +64,7 @@ class Specialization(models.Model):
 
 class Doctor(models.Model):
     """Doctor profile extending the User model"""
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='doctor_profile')
+    user = models.OneToOneField(UserDetails, on_delete=models.CASCADE, related_name='doctor_profile')
     specializations = models.ManyToManyField(Specialization, related_name='doctors')
     license_number = models.CharField(max_length=50, unique=True, null=True, blank=True)
     years_of_experience = models.PositiveIntegerField(blank=True, null=True)
