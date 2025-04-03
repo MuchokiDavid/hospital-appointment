@@ -250,6 +250,19 @@ class DoctorProfileView(APIView):
         except Exception as e:
             return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+
+class GetDoctorsListView(APIView):
+    authentication_classes= [OAuth2Authentication]
+    permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
+
+    def get(self, request, format=None):
+        try:
+            doctors = Doctor.objects.all()
+            serializer = DoctorSerializer(doctors, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 # Add patient while authenticated as Admin or Doctor-------------------------------
 class RegisterPatient(APIView):
     authentication_classes= [OAuth2Authentication]
