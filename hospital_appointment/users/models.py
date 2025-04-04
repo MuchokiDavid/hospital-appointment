@@ -1,9 +1,38 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser, UserManager
+from django.contrib.auth.models import AbstractUser, UserManager, AbstractBaseUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
+# class CustomUserManager(UserManager):
+#     def _create_user(self, email, password, **extra_fields):
+#         if not email:
+#             raise ValueError("The Email field must be set")
+#         email = self.normalize_email(email)
+#         user = self.model(email=email, **extra_fields)
+#         user.set_password(password)
+#         user.save(using=self._db)
+#         return user
+    
+#     def create_user(self, email, password=None, **extra_fields):
+#         """Create and return a regular user with an email and password."""
+#         extra_fields.setdefault('is_staff', True)
+#         extra_fields.setdefault('is_superuser', False)
+
+#         return self._create_user(email, password, **extra_fields)
+    
+#     def create_superuser(self, email, password=None, **extra_fields):
+#         """Create and return a superuser with an email and password."""
+#         extra_fields.setdefault('is_staff', True)
+#         extra_fields.setdefault('is_superuser', True)
+
+#         if extra_fields.get('is_staff') is not True:
+#             raise ValueError("Superuser must have is_staff=True.")
+#         if extra_fields.get('is_superuser') is not True:
+#             raise ValueError("Superuser must have is_superuser=True.")
+
+#         return self._create_user(email, password, **extra_fields)
 
 class UserDetails(AbstractUser):
     """Custom user model that extends Django's AbstractUser"""
@@ -17,6 +46,10 @@ class UserDetails(AbstractUser):
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     date_of_birth = models.DateField(blank=True, null=True)
     profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
+    
+    # USERNAME_FIELD = 'username'
+    # REQUIRED_FIELDS = ['email']
+    # objects = CustomUserManager()
     
     def __str__(self):
         return f"{self.get_full_name()} ({self.user_type})"
