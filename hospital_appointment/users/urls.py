@@ -10,8 +10,9 @@ urlpatterns = [
     path('user/<int:id>/', views.StaffViewUserById.as_view()),
     
     # -----------<<<<<<<<<<<<<<<<<<<<Doctor>>>>>>>>>>>>>>>>>>>>>>-----------------------------
-    path('doctor-profile/', views.DoctorProfileView.as_view(), name='doctor profile'),
-    
+    path('doctor-profile/', views.DoctorProfileView.as_view(), name='doctor profile'), #Authenticated doctor prof
+    path('doctor-list/', views.GetDoctorsListView.as_view(), name='doctor list'),
+    path('doctor-profile/<int:id>/', views.GetDoctorByIdView.as_view(), name='doctor profile'),    
     
     # ----------------<<<<<<<<<<<<<<<<Doctor specialisation>>>>>>>>>>>>>>>>>-----------------
     path('post-specialization/', views.PostSpecializationView.as_view(), name='post specialisation'),
