@@ -86,13 +86,12 @@ class MedicalRecord(models.Model):
         ('NOTE', 'General Note'),
     )
     
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='medical_records')
     doctor = models.ForeignKey(Doctor, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_records')
     appointment = models.ForeignKey(Appointment, on_delete=models.SET_NULL, null=True, blank=True, related_name='records')
     record_type = models.CharField(max_length=20, choices=RECORD_TYPE_CHOICES)
     title = models.CharField(max_length=200)
     description = models.TextField()
-    date_recorded = models.DateField(default=timezone.now)
+    date_recorded = models.DateField(auto_now_add=True, null=True, blank=True)
     file = models.FileField(upload_to='medical_records/', blank=True, null=True)
     is_sensitive = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
