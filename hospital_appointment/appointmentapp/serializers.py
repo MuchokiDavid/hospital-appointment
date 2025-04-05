@@ -49,13 +49,12 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
 
 class MedicalRecordSerializer(serializers.ModelSerializer):
-    patient = PatientSerializer(read_only=True)
     doctor = DoctorSerializer(read_only=True)
     appointment= AppointmentSerializer(read_only=True)
     
     class Meta:
         model = MedicalRecord
-        fields = ['id', 'patient', 'doctor',
+        fields = ['id', 'doctor',
                  'appointment', 'record_type', 'title',
                  'description', 'date_recorded', 'file', 'is_sensitive',
                  'created_at', 'updated_at']

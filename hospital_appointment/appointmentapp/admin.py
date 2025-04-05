@@ -31,13 +31,13 @@ class AppointmentAdmin(admin.ModelAdmin):
 
 
 class MedicalRecordAdmin(admin.ModelAdmin):
-    list_display = ('patient', 'doctor', 'record_type', 'title', 'date_recorded', 'is_sensitive')
+    list_display = ('doctor', 'record_type', 'title', 'date_recorded', 'is_sensitive')
     list_filter = ('record_type', 'is_sensitive', 'date_recorded', 'doctor')
     search_fields = (
         'patient__user__first_name', 'patient__user__last_name',
         'doctor__user__first_name', 'doctor__user__last_name', 'title', 'description'
     )
-    raw_id_fields = ('patient', 'doctor', 'appointment')
+    raw_id_fields = ('doctor', 'appointment')
     date_hierarchy = 'date_recorded'
 
 
