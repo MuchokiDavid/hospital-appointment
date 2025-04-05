@@ -389,4 +389,21 @@ class PatientProfileView(APIView):
         except Exception as e:
             return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
+#  Patient search view  ----------------------------------------------------------------------------------
+class PatientSearchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        search_term = request.query_params.get('q', '')
+        
+        patients = Patient.objects.filter(
+            models.Q(user__first_name__icontains=search_term) |
+            models.Q(user__last_name__icontains=search_term) |
+            models.Q(user__email__icontains=search_term) |
+            models.Q(user__phone_number__icontains=search_term)
+        )[:15]
+        
+        serializer = PatientSerializer(patients, many=True)
+        return Response(serializer.data) 
+        
     
