@@ -15,12 +15,12 @@ class TimeOffSerializer(serializers.ModelSerializer):
         fields= ['id', 'doctor', 'start_datetime', 'end_datetime', 'reason', 'is_approved', 'created_at', 'updated_at']
         read_only_fields= ['created_at', 'updated_at']
         
-    def validate(self, data):
-        if data['start_datetime'] >= data['end_datetime']:
-            raise serializers.ValidationError("End datetime must be after start datetime")
-        if data['start_datetime'] < timezone.now():
-            raise serializers.ValidationError("Cannot create time off in the past")
-        return data
+    # def validate(self, data):
+    #     if data['start_datetime'] >= data['end_datetime']:
+    #         raise serializers.ValidationError("End datetime must be after start datetime")
+    #     if data['start_datetime'] < timezone.now():
+    #         raise serializers.ValidationError("Cannot create time off in the past")
+    #     return data
     
 class AppointmentSerializer(serializers.ModelSerializer):
     patient = PatientSerializer(read_only=True)
@@ -28,24 +28,24 @@ class AppointmentSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Appointment
-        fields = ['id', 'patient', 'doctor'
+        fields = ['id', 'patient', 'doctor',
                  'scheduled_time', 'end_time', 'status', 'reason', 'notes',
                  'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
     
-    def validate(self, data):
-        if data['scheduled_time'] >= data['end_time']:
-            raise serializers.ValidationError("End time must be after scheduled time")
+    # def validate(self, data):
+    #     if data['scheduled_time'] >= data['end_time']:
+    #         raise serializers.ValidationError("End time must be after scheduled time")
         
-        # Check for overlapping appointments
-        if Appointment.objects.filter(
-            doctor=data['doctor'],
-            scheduled_time__lt=data['end_time'],
-            end_time__gt=data['scheduled_time']
-        ).exists():
-            raise serializers.ValidationError("This appointment overlaps with an existing one")
+    #     # Check for overlapping appointments
+    #     if Appointment.objects.filter(
+    #         doctor=data['doctor'],
+    #         scheduled_time__lt=data['end_time'],
+    #         end_time__gt=data['scheduled_time']
+    #     ).exists():
+    #         raise serializers.ValidationError("This appointment overlaps with an existing one")
             
-        return data
+    #     return data
 
 
 class MedicalRecordSerializer(serializers.ModelSerializer):
