@@ -101,7 +101,7 @@ class MedicalRecord(models.Model):
         ordering = ['-date_recorded']
     
     def __str__(self):
-        return f"{self.get_record_type_display()} for {self.patient.user.get_full_name()}"
+        return f"{self.get_record_type_display()} for {self.appointment.patient.user.get_full_name()}"
 
 
 class Prescription(models.Model):
@@ -116,7 +116,7 @@ class Prescription(models.Model):
     instructions = models.TextField(blank=True, null=True)
     
     def __str__(self):
-        return f"{self.medication_name} for {self.medical_record.patient.user.get_full_name()}"
+        return f"{self.medication_name} for {self.medical_record.appointment.patient.user.get_full_name()}"
 
 
 class Notification(models.Model):

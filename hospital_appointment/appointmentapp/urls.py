@@ -23,9 +23,9 @@ urlpatterns = [
     path('all-medical-record/', views.GetAllMedicalRecordView.as_view(), name='all-medical-record'), #GET, POST Authenticate user
     
     # ----<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Prescription>>>>>>>>>>>>>>>>>>>>>>--------------------
-    # path('prescription/', views.PrescriptionView.as_view(), name='prescription'), #GET, POST Authenticate: Doctor user
-    # path('update-prescription/<int:id>/', views.PrescriptionUpdateView.as_view(), name='update-prescription'), #PUT, DELETE Authenticate: Doctor user
-    # path('all-prescription/', views.GetAllPrescriptionView.as_view(), name='all-prescription'), #GET, POST Authenticate user
+    path('prescription/', views.PrescriptionView.as_view(), name='prescription'), #GET, POST Authenticate: Doctor user
+    path('prescription-by-id/<int:id>/', views.PrescriptionByIdView.as_view(), name='update-prescription'), #PUT, DELETE Authenticate: Doctor user
+    path('all-prescription/', views.GetAllPrescriptionView.as_view(), name='all-prescription'), #GET, POST Authenticate user
     
     # ------<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Notification>>>>>>>>>>>>>>>>>>>>>>--------------------
     path('notification/', views.GetNotifications.as_view(), name='notification'), #GET Authenticate: Doctor user

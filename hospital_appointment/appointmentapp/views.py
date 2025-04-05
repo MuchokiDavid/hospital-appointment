@@ -958,6 +958,230 @@ class GetAllMedicalRecordView(APIView):
         serializer = MedicalRecordSerializer(medical_records, many=True)
         return Response(serializer.data)
 
+class PrescriptionView(APIView):
+    permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
+    authentication_classes = [OAuth2Authentication]
+
+    def get(self, request):
+        user= request.user
+        if not user:
+            return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+        if user.user_type not in ['DOCTOR', 'ADMIN']:
+            return Response({'message': 'Only doctors or admins can perform this action'},
+                          status=http_status.HTTP_403_FORBIDDEN)
+
+        if user.user_type == 'DOCTOR':
+            current_doctor = Doctor.objects.filter(user=user).first()
+            if not current_doctor:
+                return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            prescriptions = Prescription.objects.filter(medical_record__doctor=current_doctor).all()
+
+        elif user.user_type == 'ADMIN':
+            prescriptions = Prescription.objects.all()
+
+        serializer = PrescriptionSerializer(prescriptions, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        try:
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            if user.user_type not in ['DOCTOR', 'ADMIN']:
+                return Response({'message': 'Only doctors or admins can perform this action'},
+                            status=http_status.HTTP_403_FORBIDDEN)
+
+            current_doctor = Doctor.objects.filter(user=user).first()
+            if not current_doctor:
+                return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+
+            data= request.data
+            medical_record_id = data.get('medical_record_id')
+            medication_name= data.get('medication_name')
+            dosage= data.get('dosage')
+            frequency= data.get('frequency')
+            start_date= data.get('start_date')
+            end_date= data.get('end_date')
+            refills_remaining= data.get('refills_remaining')
+            instructions= data.get('instructions')
+
+            if not medical_record_id:
+                return Response({'message': 'Medical record id is required'}, status=http_status.HTTP_400_BAD_REQUEST)
+            if not medication_name:
+                return Response({'message': 'Medical name is required'}, status=http_status.HTTP_400_BAD_REQUEST)
+            if not dosage:
+                return Response({'message': 'Dosage is required'}, status=http_status.HTTP_400_BAD_REQUEST)
+            if not frequency:
+                return Response({'message': 'Frequency is required'}, status=http_status.HTTP_400_BAD_REQUEST)
+            if not start_date:
+                timezone.now()
+            # if not end_date:
+            #     return Response({'message': 'End date is required'}, status=http_status.HTTP_400_BAD_REQUEST)
+            if not refills_remaining:
+                return Response({'message': 'Refills remaining is required'}, status=http_status.HTTP_400_BAD_REQUEST)
+
+            current_record = MedicalRecord.objects.filter(id=medical_record_id).first()
+            if not current_record:
+                return Response({'message': 'Record not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            
+            if current_doctor!=current_record.doctor:
+                return Response({'message': 'You are not authorized to create prescription for this record'}, status=http_status.HTTP_403_FORBIDDEN)
+            
+            prescription= Prescription(
+                medical_record=current_record,
+                medication_name=medication_name,
+                dosage=dosage,
+                frequency=frequency,
+                start_date=start_date,
+                end_date=end_date,
+                refills_remaining=refills_remaining,
+                instructions=instructions
+            )
+            prescription.save()  
+
+            serializer = PrescriptionSerializer(prescription)
+
+            # Send notification to doctor
+            Notification.objects.create(user=current_doctor.user, message=f"New prescription created for {current_record.appointment.patient.user.get_full_name()}")
+
+            return Response(serializer.data, status=http_status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+
+# Get all prescriptions-------------------------------------------------------------------------------------
+class GetAllPrescriptionView(APIView):
+    permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
+    authentication_classes = [OAuth2Authentication]
+
+    def get(self, request):
+        user= request.user
+        if not user:
+            return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+        if user.user_type not in ['DOCTOR', 'ADMIN']:
+            return Response({'message': 'Only doctors or admins can perform this action'},
+                          status=http_status.HTTP_403_FORBIDDEN)
+
+        if user.user_type == 'DOCTOR':
+            current_doctor = Doctor.objects.filter(user=user).first()
+            if not current_doctor:
+                return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            prescriptions = Prescription.objects.filter(medical_record__doctor=current_doctor).all()
+
+        elif user.user_type == 'ADMIN':
+            prescriptions = Prescription.objects.all()
+
+        serializer = PrescriptionSerializer(prescriptions, many=True)
+        return Response(serializer.data)
+
+# Prescription by id---------------------------------------------------------------------------------------
+class PrescriptionByIdView(APIView):
+    permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
+    authentication_classes = [OAuth2Authentication]
+    
+    def get(self, request, id):
+        try:
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            if user.user_type not in ['DOCTOR', 'ADMIN']:
+                return Response({'message': 'Only doctors or admins can perform this action'},
+                            status=http_status.HTTP_403_FORBIDDEN)
+
+            if user.user_type == 'DOCTOR':
+                current_doctor = Doctor.objects.filter(user=user).first()
+                if not current_doctor:
+                    return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+                prescription = Prescription.objects.filter(medical_record__doctor=current_doctor, id=id).first()
+
+            elif user.user_type == 'ADMIN':
+                prescription = Prescription.objects.filter(id=id).first()
+
+            if not prescription:
+                return Response({'message': 'Prescription not found'}, status=http_status.HTTP_404_NOT_FOUND)
+
+            serializer = PrescriptionSerializer(prescription)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+    
+    def put(self, request, id):
+        try:
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            if user.user_type not in ['DOCTOR', 'ADMIN']:
+                return Response({'message': 'Only doctors or admins can perform this action'},
+                            status=http_status.HTTP_403_FORBIDDEN)
+
+            if user.user_type == 'DOCTOR':
+                current_doctor = Doctor.objects.filter(user=user).first()
+                if not current_doctor:
+                    return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+                prescription = Prescription.objects.filter(medical_record__doctor=current_doctor, id=id).first()
+
+            elif user.user_type == 'ADMIN':
+                prescription = Prescription.objects.filter(id=id).first()
+
+            if not prescription:
+                return Response({'message': 'Prescription not found'}, status=http_status.HTTP_404_NOT_FOUND)
+
+            data= request.data
+            medication_name= data.get('medication_name')
+            dosage= data.get('dosage')
+            frequency= data.get('frequency')
+            start_date= data.get('start_date')
+            end_date= data.get('end_date')
+            refills_remaining= data.get('refills_remaining')
+            instructions= data.get('instructions')
+
+            if medication_name:
+                prescription.medication_name = medication_name
+            if dosage:
+                prescription.dosage = dosage
+            if frequency:
+                prescription.frequency = frequency
+            if start_date:
+                prescription.start_date = start_date
+            if end_date:
+                prescription.end_date = end_date
+            if refills_remaining:
+                prescription.refills_remaining = refills_remaining
+            if instructions:
+                prescription.instructions = instructions
+
+            prescription.save()
+
+            serializer = PrescriptionSerializer(prescription)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, id):
+        try:
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            if user.user_type not in ['DOCTOR', 'ADMIN']:
+                return Response({'message': 'Only doctors or admins can perform this action'},
+                            status=http_status.HTTP_403_FORBIDDEN)
+
+            if user.user_type == 'DOCTOR':
+                current_doctor = Doctor.objects.filter(user=user).first()
+                if not current_doctor:
+                    return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+                prescription = Prescription.objects.filter(medical_record__doctor=current_doctor, id=id).first()
+
+            elif user.user_type == 'ADMIN':
+                prescription = Prescription.objects.filter(id=id).first()
+
+            if not prescription:
+                return Response({'message': 'Prescription not found'}, status=http_status.HTTP_404_NOT_FOUND)
+
+            prescription.delete()
+            return Response({'message': 'Prescription deleted successfully'}, status=http_status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+    
 class GetNotifications(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
