@@ -15,8 +15,13 @@ from time import gmtime, strftime
 from datetime import datetime, timedelta
 from django.utils import timezone
 import pytz
+from django.http import HttpResponse
+from django.template import loader
 
 # Create your views here.
+def main(request):
+    template = loader.get_template('main.html')
+    return HttpResponse(template.render())
 
 # Get and POST availability schedule view by an authenticated doctor---------------------------------------------------------------
 class AvailabilityScheduleView(APIView):

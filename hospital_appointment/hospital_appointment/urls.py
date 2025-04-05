@@ -17,8 +17,10 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from appointmentapp import views
 
-urlpatterns = [
+urlpatterns = [    
+    path('', views.main),
     path("admin/", admin.site.urls),
     path('api/v1/', include('appointmentapp.urls')),
     path('api/v1/auth/', include('users.urls')),
