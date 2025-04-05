@@ -66,16 +66,19 @@ class AvailabilityScheduleView(APIView):
                 return Response({'message': 'Doctor is already scheduled for this time'}, status=http_status.HTTP_400_BAD_REQUEST)
             
             # Creteate the availability schedule
-            availability_schedule = AvailabilitySchedule(
-                doctor=doctor,
-                day_of_week=day_of_week,
-                start_time=start_time,
-                end_time=end_time,
-                is_recurring=is_recurring,
-                valid_from=valid_from,
-                valid_until=valid_until
-            )
-            availability_schedule.save()
+            try:
+                availability_schedule = AvailabilitySchedule(
+                    doctor=doctor,
+                    day_of_week=day_of_week,
+                    start_time=start_time,
+                    end_time=end_time,
+                    is_recurring=is_recurring,
+                    valid_from=valid_from,
+                    valid_until=valid_until
+                )
+                availability_schedule.save()
+            except Exception as e:
+                return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
             
             serializer = AvailabilityScheduleSerializer(availability_schedule)
             return Response(serializer.data, status=http_status.HTTP_201_CREATED)
@@ -93,7 +96,7 @@ class AvailabilityScheduleView(APIView):
         ).exists()
         
 # Doctor put/delete availability schedule view----------------------------------------------------------------------------------
-class AvailabilityScheduleUpdateView(APIView):
+class AvailabilityScheduleByIdView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
 
@@ -241,7 +244,7 @@ class TimeOffView(APIView):
 
         
 # Doctor put/delete time off view----------------------------------------------------------------------------------
-class TimeOffUpdateView(APIView):
+class TimeOffByIdView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
 
@@ -338,95 +341,106 @@ class AppointmentView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        user= request.user
-        if not user:
-            return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
-        
-        if user.user_type not in ['DOCTOR', 'ADMIN']:
-            return Response({'message': 'Only doctors or admins can perform this action'}, 
-                          status=http_status.HTTP_403_FORBIDDEN)
-        
-        doctor = self.get_doctor(user)
-        if not doctor:
-            return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
-        
-        data= request.data
-        scheduled_time = data.get('scheduled_time')
-        end_time = data.get('end_time')
-        status = data.get('status', 'SCHEDULED')
-        reason = data.get('reason')
-        notes = data.get('notes')
-        patient_id = data.get('patient_id')
-        
-        if not scheduled_time or not end_time:
-            return Response({'message': 'Scheduled time and end time are required'},
-                        status=http_status.HTTP_400_BAD_REQUEST)
-            
-        if not reason:
-            return Response({'message': 'Reason is required'},
-                        status=http_status.HTTP_400_BAD_REQUEST)
-        if not notes:
-            return Response({'message': 'Notes are required'},
-                        status=http_status.HTTP_400_BAD_REQUEST)
-            
-        if not patient_id:
-            return Response({'message': 'Patient ID is required'},
-                        status=http_status.HTTP_400_BAD_REQUEST)
-            
-        # Parse datetime strings
         try:
-            scheduled_time = parse_datetime(scheduled_time)
-            end_time = parse_datetime(end_time)
-        except ValueError as e:
-            return Response({'message': str(e)}, 
-                        status=http_status.HTTP_400_BAD_REQUEST)
-        
-        # Validate time period
-        validation_error = self.validate_time(scheduled_time, end_time)
-        if validation_error:
-            return Response({'message': validation_error},
-                        status=http_status.HTTP_400_BAD_REQUEST)
-        
-        # Check patient
-        patient = self.get_patient(patient_id)
-        if not patient:
-            return Response({'message': 'Patient not found'}, status=http_status.HTTP_404_NOT_FOUND)
-        if patient.user.user_type != 'PATIENT':
-            return Response({'message': 'User is not a patient'}, status=http_status.HTTP_400_BAD_REQUEST)
-        
-        availability= self.check_doctor_availability(doctor, scheduled_time, end_time)
-        if availability:
-            return Response({'message': 'Doctor not available at this time'}, 
-                       status=http_status.HTTP_400_BAD_REQUEST)  
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
             
+            if user.user_type not in ['DOCTOR', 'ADMIN']:
+                return Response({'message': 'Only doctors or admins can perform this action'}, 
+                            status=http_status.HTTP_403_FORBIDDEN)
+            
+            doctor = self.get_doctor(user)
+            if not doctor:
+                return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            
+            data= request.data
+            scheduled_time = data.get('scheduled_time')
+            end_time = data.get('end_time')
+            status = data.get('status', 'SCHEDULED')
+            reason = data.get('reason')
+            notes = data.get('notes')
+            patient_id = data.get('patient_id')
+            
+            if not scheduled_time or not end_time:
+                return Response({'message': 'Scheduled time and end time are required'},
+                            status=http_status.HTTP_400_BAD_REQUEST)
+                
+            if not reason:
+                return Response({'message': 'Reason is required'},
+                            status=http_status.HTTP_400_BAD_REQUEST)
+            if not notes:
+                return Response({'message': 'Notes are required'},
+                            status=http_status.HTTP_400_BAD_REQUEST)
+                
+            if not patient_id:
+                return Response({'message': 'Patient ID is required'},
+                            status=http_status.HTTP_400_BAD_REQUEST)
+                
+            # Parse datetime strings
+            try:
+                scheduled_time = parse_datetime(scheduled_time)
+                end_time = parse_datetime(end_time)
+            except ValueError as e:
+                return Response({'message': str(e)}, 
+                            status=http_status.HTTP_400_BAD_REQUEST)
+            
+            # Validate time period
+            validation_error = self.validate_time(scheduled_time, end_time)
+            if validation_error:
+                return Response({'message': validation_error},
+                            status=http_status.HTTP_400_BAD_REQUEST)
+            
+            # Check patient
+            patient = self.get_patient(patient_id)
+            print(patient)
+            if not patient:
+                return Response({'message': 'Patient not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            if patient.user.user_type != 'PATIENT':
+                return Response({'message': 'User is not a patient'}, status=http_status.HTTP_400_BAD_REQUEST)
+            
+            availability= self.check_doctor_availability(doctor, scheduled_time, end_time)
+            if availability:
+                return Response({'message': 'Doctor not available at this time'}, 
+                        status=http_status.HTTP_400_BAD_REQUEST)  
+                
+            
+            timeoff_availability= self.check_doctor_time_off(doctor, scheduled_time, end_time)
+            if timeoff_availability:
+                return Response({'message': 'Doctor is on leave during this time'}, 
+                        status=http_status.HTTP_400_BAD_REQUEST)
+            
+            # Check for overlapping appointments
+            appointment_overlap= self.check_appointment_overlap(doctor, scheduled_time, end_time)
+            if appointment_overlap:
+                return Response({'message': 'This appointment overlaps with an existing one'}, status=http_status.HTTP_400_BAD_REQUEST)    
+            
+            # Create appointment
+            try:
+                new_appointment = Appointment.objects.create(
+                    patient=patient,
+                    doctor=doctor,
+                    scheduled_time=scheduled_time,
+                    end_time=end_time,
+                    status=status,
+                    reason=reason,
+                    notes=notes
+                )
+            except Exception as e:
+                return Response(
+                    {'message': 'Appointment scheduling conflict occurred'},
+                    status=http_status.HTTP_409_CONFLICT
+                )
+
+            # Send notification to doctor
+            if new_appointment:
+                self.send_notifications(doctor, scheduled_time, end_time)
+            
+            serializer = AppointmentSerializer(new_appointment)
+            return Response(serializer.data, status=http_status.HTTP_201_CREATED)
         
-        timeoff_availability= self.check_doctor_time_off(doctor, scheduled_time, end_time)
-        if timeoff_availability:
-            return Response({'message': 'Doctor is on leave during this time'}, 
-                       status=http_status.HTTP_400_BAD_REQUEST)
-        
-        # Check for overlapping appointments
-        appointment_overlap= self.check_appointment_overlap(doctor, scheduled_time, end_time)
-        if appointment_overlap:
-            return Response({'message': 'This appointment overlaps with an existing one'}, status=http_status.HTTP_400_BAD_REQUEST)    
-        
-        # Create appointment
-        new_appointment = Appointment.objects.create(
-            patient=patient,
-            doctor=doctor,
-            scheduled_time=scheduled_time,
-            end_time=end_time,
-            status=status,
-            reason=reason,
-            notes=notes
-        )
-        
-        # Send notification to doctor
-        if new_appointment:
-           self.send_notifications(doctor, scheduled_time, end_time)
-        
-        serializer = AppointmentSerializer(new_appointment)
-        return Response(serializer.data, status=http_status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
     
     def get_doctor(self, user):
         try:
@@ -492,8 +506,6 @@ class AppointmentView(APIView):
             return "End datetime must be after start datetime"
         if start < now:
             return "Cannot schedule time off in the past"
-        if (end - start).total_seconds() < 3600:
-            return "Minimum time off duration is 1 hour"
         return None
     
     def send_notifications(self, doctor, start, end):
@@ -507,95 +519,132 @@ class AppointmentView(APIView):
             message=message
         )
     
-class AppointmentUpdateView(APIView):
+class AppointmentByIdView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
+    
+    def get(self, request, id):
+        try:
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            if user.user_type not in ['DOCTOR', 'ADMIN']:
+                return Response({'message': 'Only doctors or admins can perform this action'},
+                            status=http_status.HTTP_403_FORBIDDEN)
+
+            current_doctor = Doctor.objects.filter(user=user).first()
+            if not current_doctor:
+                return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+
+            appointment = get_object_or_404(Appointment, id=id)
+            serializer = AppointmentSerializer(appointment)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, id):
-        user= request.user
-        if not user:
-            return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
-        if user.user_type not in ['DOCTOR', 'ADMIN']:
-            return Response({'message': 'Only doctors or admins can perform this action'}, 
-                          status=http_status.HTTP_403_FORBIDDEN)
+        try:
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            if user.user_type not in ['DOCTOR', 'ADMIN']:
+                return Response({'message': 'Only doctors or admins can perform this action'}, 
+                            status=http_status.HTTP_403_FORBIDDEN)
 
-        current_doctor = Doctor.objects.filter(user=user).first()
-        if not current_doctor:
-            return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            current_doctor = Doctor.objects.filter(user=user).first()
+            if not current_doctor:
+                return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
 
-        appointment = get_object_or_404(Appointment, doctor=current_doctor, id=id)
-        data= request.data
-        scheduled_time = data.get('scheduled_time')
-        end_time = data.get('end_time')
-        status = data.get('status')
-        reason = data.get('reason')
-        notes = data.get('notes')
-        patient_id = data.get('patient_id')
-        
-        if scheduled_time and end_time:
-            try:
-                scheduled_time= parse_datetime(scheduled_time)
-                end_time= parse_datetime(end_time)
-            except ValueError as e:
-                return Response({'message': str(e)}, 
-                            status=http_status.HTTP_400_BAD_REQUEST)
+            appointment = get_object_or_404(Appointment, doctor=current_doctor, id=id)
+            data= request.data
+            scheduled_time = data.get('scheduled_time')
+            end_time = data.get('end_time')
+            status = data.get('status')
+            reason = data.get('reason')
+            notes = data.get('notes')
+            patient_id = data.get('patient_id')
             
-            # Validate time period
-            validation_error = self.validate_time(scheduled_time, end_time)
-            if validation_error:
-                return Response({'message': validation_error},
-                            status=http_status.HTTP_400_BAD_REQUEST)
-        
-            availability= self.check_doctor_availability(current_doctor, scheduled_time, end_time)
-            if availability:
-                return Response({'message': 'Doctor not available at this time'},
-                        status=http_status.HTTP_400_BAD_REQUEST)
+            if scheduled_time and end_time:
+                try:
+                    scheduled_time= parse_datetime(scheduled_time)
+                    end_time= parse_datetime(end_time)
+                except ValueError as e:
+                    return Response({'message': str(e)}, 
+                                status=http_status.HTTP_400_BAD_REQUEST)
                 
-            timeoff_availability= self.check_doctor_time_off(current_doctor, scheduled_time, end_time)
-            if timeoff_availability:
-                return Response({'message': 'Doctor is on leave during this time'}, 
-                        status=http_status.HTTP_400_BAD_REQUEST)
+                # Validate time period
+                validation_error = self.validate_time(scheduled_time, end_time)
+                if validation_error:
+                    return Response({'message': validation_error},
+                                status=http_status.HTTP_400_BAD_REQUEST)
             
-            # Check for overlapping appointments
-            appointment_overlap= self.check_appointment_overlap(current_doctor, scheduled_time, end_time)
-            if appointment_overlap:
-                return Response({'message': 'This appointment overlaps with an existing one'}, status=http_status.HTTP_400_BAD_REQUEST)
+                availability= self.check_doctor_availability(current_doctor, scheduled_time, end_time)
+                if availability:
+                    return Response({'message': 'Doctor not available at this time'},
+                            status=http_status.HTTP_400_BAD_REQUEST)
+                    
+                timeoff_availability= self.check_doctor_time_off(current_doctor, scheduled_time, end_time)
+                if timeoff_availability:
+                    return Response({'message': 'Doctor is on leave during this time'}, 
+                            status=http_status.HTTP_400_BAD_REQUEST)
+                
+                # Check for overlapping appointments
+                appointment_overlap= self.check_appointment_overlap(current_doctor, scheduled_time, end_time)
+                if appointment_overlap:
+                    return Response({'message': 'This appointment overlaps with an existing one'}, status=http_status.HTTP_400_BAD_REQUEST)
+                
+            if scheduled_time:
+                appointment.scheduled_time= scheduled_time
+            if end_time:
+                appointment.end_time= end_time            
+            if status:
+                appointment.status= status
+            if reason:
+                appointment.reason= reason
+            if notes:
+                appointment.notes= notes
+            if patient_id:
+                return  Response({'message': 'Patient cannot be updated'}, status=http_status.HTTP_400_BAD_REQUEST)
             
-        if scheduled_time:
-            appointment.scheduled_time= scheduled_time
-        if end_time:
-            appointment.end_time= end_time            
-        if status:
-            appointment.status= status
-        if reason:
-            appointment.reason= reason
-        if notes:
-            appointment.notes= notes
-        if patient_id:
-            return  Response({'message': 'Patient cannot be updated'}, status=http_status.HTTP_400_BAD_REQUEST)
-        
-        appointment.save()  
-        serializer = AppointmentSerializer(appointment)        
-        if status== 'CONFIRMED':
-            Notification.objects.create(user=appointment.patient.user, message=f"Appointment confirmed with {appointment.doctor.user.get_full_name()} on {appointment.scheduled_time}")
-        elif status== 'CANCELLED':
-            Notification.objects.create(user=appointment.patient.user, message=f"Appointment cancelled with {appointment.doctor.user.get_full_name()} on {appointment.scheduled_time}")
-        elif status== 'COMPLETED':
-            Notification.objects.create(user=appointment.patient.user, message=f"Appointment completed with {appointment.doctor.user.get_full_name()} on {appointment.scheduled_time}")
-        elif status== 'NO_SHOW':
-            Notification.objects.create(user=appointment.patient.user, message=f"Patient no show for appointment with {appointment.doctor.user.get_full_name()} on {appointment.scheduled_time}")
-        elif status== 'IN_PROGRESS':
-            Notification.objects.create(user=appointment.patient.user, message=f"Appointment in progress with {appointment.doctor.user.get_full_name()} on {appointment.scheduled_time}")
-        elif status== 'SCHEDULED':
-            Notification.objects.create(user=appointment.patient.user, message=f"Appointment scheduled with {appointment.doctor.user.get_full_name()} on {appointment.scheduled_time}")
-        elif status== 'RESCHEDULED':
-            Notification.objects.create(user=appointment.patient.user, message=f"Appointment rescheduled with {appointment.doctor.user.get_full_name()} on {appointment.scheduled_time}")
-        return Response(serializer.data)
+            appointment.save()  
+            serializer = AppointmentSerializer(appointment)        
+            if status== 'CONFIRMED':
+                Notification.objects.create(user=appointment.patient.user, message=f"Appointment confirmed with {appointment.doctor.user.get_full_name()} on {appointment.scheduled_time}")
+            elif status== 'CANCELLED':
+                Notification.objects.create(user=appointment.patient.user, message=f"Appointment cancelled with {appointment.doctor.user.get_full_name()} on {appointment.scheduled_time}")
+            elif status== 'COMPLETED':
+                Notification.objects.create(user=appointment.patient.user, message=f"Appointment completed with {appointment.doctor.user.get_full_name()} on {appointment.scheduled_time}")
+            elif status== 'NO_SHOW':
+                Notification.objects.create(user=appointment.patient.user, message=f"Patient no show for appointment with {appointment.doctor.user.get_full_name()} on {appointment.scheduled_time}")
+            elif status== 'IN_PROGRESS':
+                Notification.objects.create(user=appointment.patient.user, message=f"Appointment in progress with {appointment.doctor.user.get_full_name()} on {appointment.scheduled_time}")
+            elif status== 'SCHEDULED':
+                Notification.objects.create(user=appointment.patient.user, message=f"Appointment scheduled with {appointment.doctor.user.get_full_name()} on {appointment.scheduled_time}")
+            elif status== 'RESCHEDULED':
+                Notification.objects.create(user=appointment.patient.user, message=f"Appointment rescheduled with {appointment.doctor.user.get_full_name()} on {appointment.scheduled_time}")
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, id):
-        appointment = get_object_or_404(Appointment, id=id)
-        appointment.delete()
-        return Response(status=http_status.HTTP_204_NO_CONTENT)
+        try:
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            if user.user_type not in ['DOCTOR', 'ADMIN']:
+                return Response({'message': 'Only doctors or admins can perform this action'}, 
+                            status=http_status.HTTP_403_FORBIDDEN)
+
+            current_doctor = Doctor.objects.filter(user=user).first()
+            if not current_doctor:
+                return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            appointment = get_object_or_404(Appointment, doctor=current_doctor, id=id)
+            appointment.delete()
+            Notification.objects.create(user=appointment.doctor.user, message=f"Appointment with {appointment.doctor.user.get_full_name()} on {appointment.scheduled_time} has been deleted")
+            serializer = AppointmentSerializer(appointment)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
     
     def validate_time(self, start, end):
         """Validate time off period"""
@@ -650,7 +699,259 @@ class AppointmentUpdateView(APIView):
         ).exists()
         
         return overlap
+
+# Get all appointments view----------------------------------------------------------------------------------
+class GetAllAppointmentView(APIView):
+    permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
+    authentication_classes = [OAuth2Authentication]
+
+    def get(self, request):
+        user= request.user
+        if not user:
+            return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+
+        if user.user_type == 'PATIENT':
+            appointments = Appointment.objects.filter(patient__user=user).all()
+        elif user.user_type == 'DOCTOR':
+            appointments = Appointment.objects.filter(doctor__user=user).all()
+        else:
+            appointments = Appointment.objects.all()
+
+        serializer = AppointmentSerializer(appointments, many=True)
+        return Response(serializer.data)
+
+# Doctor save medical record view----------------------------------------------------------------------------------
+class MedicalRecordView(APIView):
+    permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
+    authentication_classes = [OAuth2Authentication]
     
+    def get(self, request):
+        user= request.user
+        if not user:
+            return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+        if user.user_type not in ['DOCTOR', 'ADMIN']:
+            return Response({'message': 'Only doctors or admins can perform this action'}, 
+                          status=http_status.HTTP_403_FORBIDDEN)
+        current_doctor = Doctor.objects.filter(user=user).first()
+        if not current_doctor:
+            return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+        
+        medical_records= None        
+        if user.user_type == 'DOCTOR':
+            medical_records = MedicalRecord.objects.filter(doctor=current_doctor).all()
+        elif user.user_type == 'ADMIN':
+            medical_records = MedicalRecord.objects.all()
+        else:
+            medical_records = MedicalRecord.objects.filter(patient__user=user).all()
+        serializer = MedicalRecordSerializer(medical_records, many=True)
+        return Response(serializer.data)
+    
+    def post(self, request):
+        try:
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            if user.user_type not in ['DOCTOR', 'ADMIN']:
+                return Response({'message': 'Only doctors or admins can perform this action'}, 
+                            status=http_status.HTTP_403_FORBIDDEN)
+
+            current_doctor = Doctor.objects.filter(user=user).first()
+            if not current_doctor:
+                return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+
+            data= request.data
+            appointment_id = data.get('appointment_id')
+            record_type = data.get('record_type')
+            title = data.get('title')
+            description = data.get('description')
+            date_recorded = data.get('date_recorded')
+            file = request.FILES.get('file')
+            is_sensitive = data.get('is_sensitive')
+            
+            if not record_type:
+                return Response({'message': 'Record type is required'}, status=http_status.HTTP_400_BAD_REQUEST)
+            if not title:
+                return Response({'message': 'Title is required'}, status=http_status.HTTP_400_BAD_REQUEST)
+            if not description:
+                return Response({'message': 'Description is required'}, status=http_status.HTTP_400_BAD_REQUEST)
+            if not file:
+                return Response({'message': 'File is required'}, status=http_status.HTTP_400_BAD_REQUEST)           
+            if not appointment_id:
+                return Response({'message': 'Appointment ID is required'}, status=http_status.HTTP_400_BAD_REQUEST)
+            
+            current_appointment = Appointment.objects.filter(id=appointment_id).first()
+            if not current_appointment:
+                return Response({'message': 'Appointment not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            
+            if current_appointment.patient.user.user_type != 'PATIENT':
+                return Response({'message': 'User is not a patient'}, status=http_status.HTTP_400_BAD_REQUEST)
+            
+            patient = Patient.objects.filter(id=current_appointment.patient.id).first()
+            if not patient:
+                return Response({'message': 'Patient not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            
+            # Check for duplicate medical records
+            duplicate = self.check_dulicate(title, record_type, current_doctor, current_appointment)
+            if duplicate:
+                return Response({'message': 'Duplicate medical record found'}, status=http_status.HTTP_400_BAD_REQUEST)
+            
+            # Validate file size
+            if file and file.size > 10*1024*1024:  # 10MB limit
+                return Response({'message': 'File size cannot exceed 10MB'}, status=http_status.HTTP_400_BAD_REQUEST)
+            
+            # Create medical record
+            if not is_sensitive:
+                is_sensitive = False
+                
+            if not date_recorded:
+                date_recorded = timezone.now()
+            else:
+                try:
+                    date_recorded = parse_datetime(date_recorded)
+                except ValueError as e:
+                    return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+
+            medical_record = MedicalRecord(
+                doctor=current_doctor,
+                appointment=current_appointment,
+                record_type=record_type,
+                title=title,
+                description=description,
+                date_recorded=date_recorded,
+                file=file,
+                is_sensitive=is_sensitive
+            )
+            
+            medical_record.save()
+            
+            serializer = MedicalRecordSerializer(medical_record)
+            
+            # Send notification to doctor
+            Notification.objects.create(user=current_doctor.user, message=f"New medical record created for {patient.user.get_full_name()}")
+
+            return Response(serializer.data, status=http_status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+        
+    def check_dulicate(self, title, record_type ,doctor, appointment):
+        """Check for duplicate medical records"""
+        duplicate = MedicalRecord.objects.filter(
+            record_type=record_type,
+            title=title,
+            doctor=doctor,
+            appointment=appointment,
+            created_at__date=timezone.now().date()
+        ).exists()
+        
+        return duplicate
+    
+# Doctor medical record by id view----------------------------------------------------------------------------------    
+class MedicalRecordByIdView(APIView):
+    permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
+    authentication_classes = [OAuth2Authentication]
+    
+    def get(self, request, id):
+        try:
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            if user.user_type not in ['DOCTOR', 'ADMIN']:
+                return Response({'message': 'Only doctors or admins can perform this action'},
+                            status=http_status.HTTP_403_FORBIDDEN)
+
+            current_doctor = Doctor.objects.filter(user=user).first()
+            if not current_doctor:
+                return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+
+            medical_record = get_object_or_404(MedicalRecord, id=id)
+            serializer = MedicalRecordSerializer(medical_record)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, id):
+        try:
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            if user.user_type not in ['DOCTOR', 'ADMIN']:
+                return Response({'message': 'Only doctors or admins can perform this action'},
+                            status=http_status.HTTP_403_FORBIDDEN)
+
+            current_doctor = Doctor.objects.filter(user=user).first()
+            if not current_doctor:
+                return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+
+            medical_record = get_object_or_404(MedicalRecord, id=id)
+            data= request.data
+            record_type = data.get('record_type')
+            title= data.get('title')
+            description= data.get('description')
+            date_recorded= data.get('date_recorded')
+            file= request.FILES.get('file')
+            is_sensitive= data.get('is_sensitive')
+            
+            if record_type:
+                medical_record.record_type = record_type
+            if title:
+                medical_record.title = title
+            if description:
+                medical_record.description = description
+            if date_recorded:
+                medical_record.date_recorded = date_recorded
+            if file:
+                medical_record.file = file
+            if is_sensitive:
+                medical_record.is_sensitive = is_sensitive           
+
+            medical_record.save()
+            serializer = MedicalRecordSerializer(medical_record)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+        
+    def delete(self, request, id):
+        try:
+            user= request.user
+            if not user:
+                return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            if user.user_type not in ['DOCTOR', 'ADMIN']:
+                return Response({'message': 'Only doctors or admins can perform this action'},
+                            status=http_status.HTTP_403_FORBIDDEN)
+
+            current_doctor = Doctor.objects.filter(user=user).first()
+            if not current_doctor:
+                return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+
+            medical_record = get_object_or_404(MedicalRecord, id=id)
+            medical_record.delete()
+            return Response({'message': 'Medical record deleted successfully'}, status=http_status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+        
+class GetAllMedicalRecordView(APIView):
+    permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
+    authentication_classes = [OAuth2Authentication]
+
+    def get(self, request):
+        user= request.user
+        if not user:
+            return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+        if user.user_type not in ['DOCTOR', 'ADMIN']:
+            return Response({'message': 'Only doctors or admins can perform this action'},
+                          status=http_status.HTTP_403_FORBIDDEN)
+            
+        if user.user_type == 'DOCTOR':
+            current_doctor = Doctor.objects.filter(user=user).first()
+            if not current_doctor:
+                return Response({'message': 'Doctor not found'}, status=http_status.HTTP_404_NOT_FOUND)
+            medical_records = MedicalRecord.objects.filter(doctor=current_doctor).all()
+            
+        elif user.user_type == 'ADMIN':
+            medical_records = MedicalRecord.objects.all()
+            
+        serializer = MedicalRecordSerializer(medical_records, many=True)
+        return Response(serializer.data)
 
 class GetNotifications(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
@@ -661,6 +962,30 @@ class GetNotifications(APIView):
         if not user:
             return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
         
-        notifications = Notification.objects.filter(user=user).all()
+        notifications = Notification.objects.filter(user=user, is_read=False).all()
         serializer = NotificationSerializer(notifications, many=True)
+        return Response(serializer.data)
+    
+class NotificationById(APIView):
+    permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
+    authentication_classes = [OAuth2Authentication]
+
+    def get(self, request, id):
+        user= request.user
+        if not user:
+            return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+
+        notification = get_object_or_404(Notification, id=id)
+        serializer = NotificationSerializer(notification)
+        return Response(serializer.data)
+
+    def put(self, request, id):
+        user= request.user
+        if not user:
+            return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+
+        notification = get_object_or_404(Notification, id=id)
+        notification.is_read = True
+        notification.save()
+        serializer = NotificationSerializer(notification)
         return Response(serializer.data)
