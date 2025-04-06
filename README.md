@@ -88,6 +88,9 @@ A robust backend service for managing patient data and scheduling appointments w
    ```bash
    python manage.py runserver
    ```
+## Database Schema
+The system includes a robust database schema which is also scalable.
+Access the schema at [https://github.com/MuchokiDavid/hospital-appointment/blob/main/Appointment_API_schema_diagram.pdf](https://github.com/MuchokiDavid/hospital-appointment/blob/main/Appointment_API_schema_diagram.pdf)
 
 ## Admin Interface
 
@@ -102,10 +105,12 @@ Access the admin panel at `http://localhost:8000/admin/`
 ## API Endpoints (Optional)
 
 If you implement DRF, here are suggested endpoints:
-- `/api/patients/` - Patient CRUD operations
-- `/api/doctors/` - Doctor management
-- `/api/appointments/` - Appointment scheduling
-- `/api/medical-records/` - Medical records access
+-  `/api/v1/auth/register` - Doctor Register acccount
+- `/api/v1/auth/register-patient/` - Patient CRUD operations
+- `/api/v1/auth/doctor-profile/` - Doctor management
+- `/api/v1/appointment/` - Appointment scheduling
+- `/api/medical-record/` - Medical records access
+- More endpoints the documentation
 
 
 ## Deployment
@@ -115,6 +120,21 @@ For production deployment:
 2. Configure a production database
 3. Set up a proper web server (Gunicorn recommended)
 4. Configure static files collection
+
+## API Documentation
+
+We provide comprehensive interactive documentation for all API endpoints:
+
+| Documentation Type | URL |
+|--------------------|-----|
+| **Swagger UI** (Interactive) | [https://hospital-appointment-tvid.onrender.com/swagger/](https://hospital-appointment-tvid.onrender.com/swagger/) |
+| **ReDoc** (Alternative) | [https://hospital-appointment-tvid.onrender.com/documentation/]([https://hospital-appointment-tvid.onrender.com/documentation/) |
+
+**Features:**
+- Try-it-out functionality for testing endpoints
+- Detailed request/response examples
+- Authentication instructions
+- Model schemas
 
 ## Contributing
 
