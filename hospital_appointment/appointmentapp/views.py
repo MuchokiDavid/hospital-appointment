@@ -17,6 +17,10 @@ from django.utils import timezone
 import pytz
 from django.http import HttpResponse
 from django.template import loader
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 # Create your views here.
 def main(request):
@@ -27,6 +31,32 @@ def main(request):
 class AvailabilityScheduleView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
+    
+    @swagger_auto_schema(
+        operation_summary="Authenticated doctor availability schedule",
+        operation_description="Retrieves all availability slots for the authenticated doctor. Requires doctor or admin privileges.",
+        security=[{'Bearer': []}],
+        responses={
+            200: openapi.Response('List of availability slots', AvailabilityScheduleSerializer(many=True)),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "Doctor/Schedule not found"
+                    }
+                }
+            )
+        },
+        tags=["Doctor's Availability Schedule"]
+    )
 
     def get(self, request):
         user= request.user
@@ -44,6 +74,87 @@ class AvailabilityScheduleView(APIView):
         availability = AvailabilitySchedule.objects.filter(doctor_id=current_doctor.id).all()
         serializer = AvailabilityScheduleSerializer(availability, many=True)
         return Response(serializer.data)
+    
+    @swagger_auto_schema(
+        operation_summary="Create availability schedule",
+        operation_description="Creates a new availability slot for the doctor. Requires doctor or admin privileges.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['day_of_week', 'start_time', 'end_time', 'valid_from', 'valid_until'],
+            properties={
+                'day_of_week': openapi.Schema(
+                    type=openapi.TYPE_INTEGER,
+                    description="Day of week (0=Monday, 6=Sunday)",
+                    enum=[0, 1, 2, 3, 4, 5, 6]
+                ),
+                'start_time': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATETIME,
+                    description="Start time in HH:MM:SS format",
+                    example="09:00:00"
+                ),
+                'end_time': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATETIME,
+                    description="End time in HH:MM:SS format",
+                    example="17:00:00"
+                ),
+                'is_recurring': openapi.Schema(
+                    type=openapi.TYPE_BOOLEAN,
+                    description="Whether the slot repeats weekly",
+                    default=True
+                ),
+                'valid_from': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATE,
+                    description="Date from which this slot is valid (YYYY-MM-DD)"
+                ),
+                'valid_until': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATE,
+                    description="Date until which this slot is valid (YYYY-MM-DD)",
+                    required=[False]
+                )
+            },
+            example={
+                "day_of_week": 0,
+                "start_time": "09:00:00",
+                "end_time": "17:00:00",
+                "is_recurring": True,
+                "valid_from": "2023-08-01",
+                "valid_until": "2023-12-31"
+            }
+        ),
+        responses={
+            201: openapi.Response('Availability created', AvailabilityScheduleSerializer),
+            400: openapi.Response(
+                description="Bad Request",
+                examples={
+                    "application/json": {
+                        "message": "Doctor is already scheduled for this time"
+                    }
+                }
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "Doctor not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        tags=["Doctor's Availability Schedule"]
+    )
 
     def post(self, request):
         try:
@@ -66,6 +177,9 @@ class AvailabilityScheduleView(APIView):
             is_recurring = request.data.get('is_recurring', True)
             valid_from = request.data.get('valid_from')
             valid_until = request.data.get('valid_until')
+            
+            if not all([day_of_week, start_time, end_time, valid_from, valid_until]):
+                return Response({'message': 'Missing required fields'}, status=http_status.HTTP_400_BAD_REQUEST)
             
             if self.check_availability( doctor, day_of_week, start_time, end_time ):
                 return Response({'message': 'Doctor is already scheduled for this time'}, status=http_status.HTTP_400_BAD_REQUEST)
@@ -104,6 +218,105 @@ class AvailabilityScheduleView(APIView):
 class AvailabilityScheduleByIdView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
+    
+    @swagger_auto_schema(
+        operation_summary="Update availability schedule",
+        operation_description="Update an existing availability slot for the doctor. Requires doctor or admin privileges.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=[],
+            properties={
+                'day_of_week': openapi.Schema(
+                    type=openapi.TYPE_INTEGER,
+                    description="Day of week (0=Monday, 6=Sunday)",
+                    enum=[0, 1, 2, 3, 4, 5, 6]
+                ),
+                'start_time': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATETIME,
+                    description="Start time in HH:MM:SS format",
+                    example="09:00:00"
+                ),
+                'end_time': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATETIME,
+                    description="End time in HH:MM:SS format",
+                    example="17:00:00"
+                ),
+                'is_recurring': openapi.Schema(
+                    type=openapi.TYPE_BOOLEAN,
+                    description="Whether the slot repeats weekly",
+                    default=True
+                ),
+                'valid_from': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATE,
+                    description="Date from which this slot is valid (YYYY-MM-DD)"
+                ),
+                'valid_until': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATE,
+                    description="Date until which this slot is valid (YYYY-MM-DD)",
+                    required=[False]
+                )
+            },
+            example={
+                "day_of_week": 0,
+                "start_time": "09:00:00",
+                "end_time": "17:00:00",
+                "is_recurring": True,
+                "valid_from": "2023-08-01",
+                "valid_until": "2023-12-31"
+            }
+        ),
+        manual_parameters=[
+            openapi.Parameter(
+                name='id',
+                in_=openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                description="ID of the availability schedule to update"
+            ),
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        responses={
+            200: openapi.Response('Availability schedule updated', AvailabilityScheduleSerializer),
+            400: openapi.Response(
+                description="Bad Request",
+                examples={
+                    "application/json": {
+                        "errors": {
+                            "day_of_week": ["This field is required."],
+                            "start_time": ["This field is required."]
+                        }
+                    }
+                }
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "You do not have permission to perform this action."
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "Availability schedule not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        tags=["Doctor's Availability Schedule"]
+    )
 
     def put(self, request, id):
         availability_schedule = get_object_or_404(AvailabilitySchedule, id=id)
@@ -112,16 +325,90 @@ class AvailabilityScheduleByIdView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=http_status.HTTP_400_BAD_REQUEST)
+    
+    @swagger_auto_schema(
+        operation_summary="Delete availability schedule",
+        operation_description="Delete an existing availability slot. Requires doctor or admin privileges.",
+        manual_parameters=[
+            openapi.Parameter(
+                name='id',
+                in_=openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                description="ID of the availability schedule to delete"
+            ),
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        responses={
+            204: openapi.Response(
+                description="No Content",
+                examples={
+                    "application/json": {
+                        "message": "Availability schedule deleted successfully"
+                    }
+                }
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "You do not have permission to perform this action."
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "Availability schedule not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        tags=["Doctor's Availability Schedule"]
+    )
 
     def delete(self, request, id):
         availability_schedule = get_object_or_404(AvailabilitySchedule, id=id)
         availability_schedule.delete()
-        return Response(status=http_status.HTTP_204_NO_CONTENT)
+        return Response({'message':'Availability schedule deleted successfully'},status=http_status.HTTP_204_NO_CONTENT)
         
 #Get all availability schedule view--------------------------------------------------------------- 
 class GetAllAvailabilityScheduleView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
+    
+    @swagger_auto_schema(
+        operation_summary="Get all availability schedules",
+        operation_description="Retrieves all availability slots for the authenticated user. Requires doctor or admin privileges.",
+        security=[{'Bearer': []}],
+        responses={
+            200: openapi.Response('List of all availability slots', AvailabilityScheduleSerializer(many=True)),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "Doctor/Schedule not found"
+                    }
+                }
+            )
+        },
+        tags=["Doctor's Availability Schedule"]
+    )
 
     def get(self, request):
         availability = AvailabilitySchedule.objects.all()
@@ -132,6 +419,41 @@ class GetAllAvailabilityScheduleView(APIView):
 class TimeOffView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
+    
+    @swagger_auto_schema(
+        operation_summary="Doctor Get Own Time-offs",
+        operation_description="Retrieves all time-offs slots for the authenticated doctor. Requires doctor or admin privileges.",
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        responses={
+            200: openapi.Response('List of time-off slots', TimeOffSerializer(many=True)),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "Doctor not found"
+                    }
+                }
+            )
+        },
+        tags=["Doctor Time-Offs"]
+    )
 
     def get(self, request):
         try:
@@ -152,6 +474,93 @@ class TimeOffView(APIView):
             return Response(serializer.data)
         except Exception as e:
             return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+        
+    @swagger_auto_schema(
+        operation_summary="Create time off request",
+        operation_description="""Create a new time off request for a doctor.
+        Requires doctor privileges.
+        - Start and end datetimes must be in ISO 8601 format (YYYY-MM-DDTHH:MM:SS)
+        - Time off periods cannot overlap with existing time off
+        - Minimum duration is 1 hour""",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['start_datetime', 'end_datetime', 'reason'],
+            properties={
+                'start_datetime': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATETIME,
+                    description="Start datetime in ISO 8601 format",
+                    example="2023-08-15T09:00:00"
+                ),
+                'end_datetime': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATETIME,
+                    description="End datetime in ISO 8601 format",
+                    example="2023-08-15T17:00:00"
+                ),
+                'reason': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="Reason for time off",
+                    example="Medical conference"
+                ),
+                'is_approved': openapi.Schema(
+                    type=openapi.TYPE_BOOLEAN,
+                    description="Approval status (admins only)",
+                    default=False
+                )
+            },
+            example={
+                "start_datetime": "2023-08-15T09:00:00",
+                "end_datetime": "2023-08-15T17:00:00",
+                "reason": "Medical conference",
+                "is_approved": False
+            }
+        ),
+        responses={
+            201: openapi.Response( "Time off created", TimeOffSerializer),
+            400: openapi.Response(
+                description="Bad Request",
+                examples={
+                    "application/json": {
+                        "message": "Start and end datetime are required"
+                    },
+                    "application/json": {
+                        "message": "Invalid datetime format. Use YYYY-MM-DDTHH:MM:SS"
+                    },
+                    "application/json": {
+                        "message": "Time off conflicts with existing time off"
+                    }
+                }
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "Doctor not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=['Doctor Time-Offs']
+    )
 
     def post(self, request):
         try:
@@ -252,6 +661,103 @@ class TimeOffView(APIView):
 class TimeOffByIdView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
+    
+    @swagger_auto_schema(
+        operation_summary="Update time off request",
+        operation_description="""Update an existing time off request.
+        Requires doctor or admin privileges.
+        - Doctors can only update their own time off requests
+        - Admins can approve/reject time off requests
+        - Partial updates are allowed""",
+        manual_parameters=[
+            openapi.Parameter(
+                name='id',
+                in_=openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                description="ID of the time off request to update"
+            ),
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'start_datetime': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATETIME,
+                    description="New start datetime in ISO 8601 format",
+                    example="2023-08-15T09:00:00"
+                ),
+                'end_datetime': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATETIME,
+                    description="New end datetime in ISO 8601 format",
+                    example="2023-08-15T17:00:00"
+                ),
+                'reason': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="Updated reason for time off",
+                    example="Changed to medical conference"
+                ),
+                'is_approved': openapi.Schema(
+                    type=openapi.TYPE_BOOLEAN,
+                    description="Approval status (admins only)",
+                    default=False
+                )
+            },
+            example={
+                "start_datetime": "2023-08-15T09:00:00",
+                "end_datetime": "2023-08-15T17:00:00",
+                "reason": "Medical conference",
+                "is_approved": True
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                description="Time off updated successfully",
+                schema=TimeOffSerializer
+            ),
+            400: openapi.Response(
+                description="Bad Request",
+                examples={
+                    "application/json": {
+                        "errors": {
+                            "start_datetime": ["Invalid datetime format"]
+                        }
+                    },
+                    "application/json": {
+                        "message": "End datetime must be after start datetime"
+                    }
+                }
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    },
+                    "application/json": {
+                        "message": "You can only update your own time off requests"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "Time off request not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        tags=['Doctor Time-Offs']
+    )
 
     def put(self, request, id):
         try:
@@ -283,8 +789,19 @@ class TimeOffByIdView(APIView):
                 if validation_error:
                     return Response({'message': validation_error}, 
                                 status=http_status.HTTP_400_BAD_REQUEST)
+                    
+                if self.has_time_off_conflict(current_doctor, start_datetime, end_datetime):
+                    return Response(
+                        {'message': 'Updated time conflicts with existing time off'},
+                        status=http_status.HTTP_400_BAD_REQUEST
+                    )
             
             time_off = get_object_or_404(TimeOff,doctor=current_doctor, id=id)
+            if time_off.doctor != current_doctor and user.user_type != 'ADMIN':
+                return Response(
+                    {'message': 'You can only update your own time off requests'},
+                    status=http_status.HTTP_403_FORBIDDEN
+                )
             serializer = TimeOffSerializer(time_off, data=request.data, partial=True)
             if serializer.is_valid():
                 update_time= serializer.save()
@@ -295,11 +812,59 @@ class TimeOffByIdView(APIView):
         
         except Exception as e:
             return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+        
+    @swagger_auto_schema(
+        operation_summary="Delete time off schedule",
+        operation_description="Delete an existing time off slot. Requires doctor privileges.",
+        manual_parameters=[
+            openapi.Parameter(
+                name='id',
+                in_=openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                description="ID of the time off schedule to delete"
+            ),
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        responses={
+            204: openapi.Response(
+                description="No Content",
+                examples={
+                    "application/json": {
+                        "message": "Time off schedule deleted successfully"
+                    }
+                }
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "You do not have permission to perform this action."
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "Time off schedule not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        tags=["Doctor Time-Offs"]
+    )
 
     def delete(self, request, id):
         time_off = get_object_or_404(TimeOff, id=id)
         time_off.delete()
-        return Response(status=http_status.HTTP_204_NO_CONTENT)
+        return Response({'message': 'Time off schedule deleted successfully'}, status=http_status.HTTP_204_NO_CONTENT)
     
     def validate_time_off(self, start, end):
         """Validate time off period"""
@@ -311,14 +876,58 @@ class TimeOffByIdView(APIView):
         if (end - start).total_seconds() < 3600:
             return "Minimum time off duration is 1 hour"
         return None
+    
+    def has_time_off_conflict(self, doctor, start, end):
+        """Check for overlapping time off periods"""
+        return TimeOff.objects.filter(
+            doctor=doctor,
+            start_datetime__lt=end,
+            end_datetime__gt=start
+        ).exists()
         
         
 # Get all time off view----------------------------------------------------------------------------------
 class GetAllTimeOffView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
+    
+    @swagger_auto_schema(
+        operation_summary="Get all time off requests",
+        operation_description="Retrieve a list of all time off requests for all doctors. Requires doctor/admin privileges.",
+        responses={
+            200: openapi.Response(
+                description="List of time off requests",
+                schema=TimeOffSerializer(many=True)
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "Doctor not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        tags=['Doctor Time-Offs']
+    )
 
     def get(self, request):
+        user= request.user
+        if not user:
+            return Response({'message': 'User not found'}, status=http_status.HTTP_404_NOT_FOUND)
+        if user.user_type not in ['DOCTOR', 'ADMIN']:
+            return Response({'message': 'Only doctors or admins can perform this action'},
+                          status=http_status.HTTP_403_FORBIDDEN)
+
         time_off = TimeOff.objects.all()
         serializer = TimeOffSerializer(time_off, many=True)
         return Response(serializer.data)
@@ -327,6 +936,44 @@ class GetAllTimeOffView(APIView):
 class AppointmentView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
+    
+    @swagger_auto_schema(
+        operation_summary="Authenticated doctor appointments",
+        operation_description="Retrieve a list of all appointments for the current doctor. Requires doctor/admin privileges.",
+        responses={
+            200: openapi.Response(
+                description="List of appointments",
+                schema=AppointmentSerializer(many=True)
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "Doctor not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=['Doctor Appointments']
+    )
     
     def get(self, request):
         user= request.user
@@ -344,6 +991,64 @@ class AppointmentView(APIView):
         appointments = Appointment.objects.filter(doctor_id=current_doctor.id).all()
         serializer = AppointmentSerializer(appointments, many=True)
         return Response(serializer.data)
+    
+    @swagger_auto_schema(
+        operation_summary="Create an appointment",
+        operation_description="Create a new appointment for the current doctor. Requires doctor privileges.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'scheduled_time': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME),
+                'end_time': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME),
+                'reason': openapi.Schema(type=openapi.TYPE_STRING),
+                'notes': openapi.Schema(type=openapi.TYPE_STRING),
+                'patient_id': openapi.Schema(type=openapi.TYPE_INTEGER)
+            },
+            required=['scheduled_time', 'end_time', 'reason', 'notes', 'patient_id']
+        ),
+        responses={
+            201: openapi.Response(
+                description="Appointment created successfully",
+                schema=AppointmentSerializer
+            ),
+            400: openapi.Response(
+                description="Bad Request",
+                examples={
+                    "application/json": {
+                        "message": "Invalid data provided"
+                    }
+                }
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "Doctor not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=['Doctor Appointments']
+   
+    )
 
     def post(self, request):
         try:
@@ -528,6 +1233,51 @@ class AppointmentByIdView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
     
+    @swagger_auto_schema(
+        operation_summary="Get an appointment by ID",
+        operation_description="Retrieve an appointment by its ID. Requires doctor privileges.",
+        responses={
+            200: openapi.Response(
+                description="Appointment retrieved successfully",
+                schema=AppointmentSerializer
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "Doctor not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            ),
+            openapi.Parameter(
+                name='id',
+                in_=openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                required=True,
+                description="Appointment ID"
+            )
+        ],
+        tags=['Doctor Appointments']
+    )
+    
     def get(self, request, id):
         try:
             user= request.user
@@ -546,6 +1296,67 @@ class AppointmentByIdView(APIView):
             return Response(serializer.data)
         except Exception as e:
             return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+    
+    @swagger_auto_schema(
+        operation_summary="Update an appointment",
+        operation_description="Update an appointment by its ID. Requires doctor privileges.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'scheduled_time': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME),
+                'end_time': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME),
+                'status': openapi.Schema(type=openapi.TYPE_STRING),
+                'reason': openapi.Schema(type=openapi.TYPE_STRING),
+                'notes': openapi.Schema(type=openapi.TYPE_STRING),
+                'patient_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+            }
+        ),
+        responses={
+            200: openapi.Response("Appointment updated successfully",AppointmentSerializer),
+            400: openapi.Response(
+                description="Bad Request",
+                examples={
+                    "application/json": {
+                        "message": "Invalid input data"
+                    }
+                }
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "Doctor not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            ),
+            openapi.Parameter(
+                name='id',
+                in_= openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                required=True,
+                description="Appointment ID"
+            )
+        ],
+        tags=['Doctor Appointments']
+    )
 
     def put(self, request, id):
         try:
@@ -630,6 +1441,51 @@ class AppointmentByIdView(APIView):
             return Response(serializer.data)
         except Exception as e:
             return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+        
+    @swagger_auto_schema(
+        operation_summary="Delete an appointment",
+        operation_description="Delete an appointment by its ID. Requires doctor privileges.",
+        responses={
+            200: openapi.Response(
+                description="Appointment deleted successfully",
+                schema=AppointmentSerializer
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "Doctor not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            ),
+            openapi.Parameter(
+                name='id',
+                in_= openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                required=True,
+                description="Appointment ID"
+            )
+        ],
+        tags=['Doctor Appointments']
+    )
 
     def delete(self, request, id):
         try:
@@ -709,6 +1565,44 @@ class AppointmentByIdView(APIView):
 class GetAllAppointmentView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
+    
+    @swagger_auto_schema(
+        operation_summary="Get all appointments",
+        operation_description="Get a list of all appointments. Requires doctor privileges.",
+        responses={
+            200: openapi.Response(
+                description="List of appointments",
+                schema=AppointmentSerializer(many=True)
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "User not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=['Doctor Appointments']
+    )
 
     def get(self, request):
         user= request.user
@@ -730,6 +1624,45 @@ class MedicalRecordView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
     
+    @swagger_auto_schema(
+        # get
+        operation_summary="Authenticated doctor medical records",
+        operation_description="Get a list of medical records. Requires doctor privileges.",
+        responses={
+            200: openapi.Response(
+                description="List of medical records",
+                schema=MedicalRecordSerializer(many=True)
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "User not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=['Doctor Medical Records']
+    )
+    
     def get(self, request):
         user= request.user
         if not user:
@@ -750,6 +1683,66 @@ class MedicalRecordView(APIView):
             medical_records = MedicalRecord.objects.filter(patient__user=user).all()
         serializer = MedicalRecordSerializer(medical_records, many=True)
         return Response(serializer.data)
+    
+    @swagger_auto_schema(
+        # post
+        operation_summary="Create a medical record",
+        operation_description="Create a new medical record. Requires doctor privileges.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'appointment_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                'record_type': openapi.Schema(type=openapi.TYPE_STRING),
+                'title': openapi.Schema(type=openapi.TYPE_STRING),
+                'description': openapi.Schema(type=openapi.TYPE_STRING),
+                'date_recorded': openapi.Schema(type=openapi.TYPE_STRING),
+                'file': openapi.Schema(type=openapi.TYPE_FILE),
+                'is_sensitive': openapi.Schema(type=openapi.TYPE_BOOLEAN)
+            },
+            required=['appointment_id', 'record_type', 'title', 'description', 'file']
+        ),
+        responses={
+            201: openapi.Response(
+                description="Medical record created successfully",
+                schema=MedicalRecordSerializer
+            ),
+            400: openapi.Response(
+                description="Bad Request",
+                examples={
+                    "application/json": {
+                        "message": "Duplicate medical record found"
+                    }
+                }
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "User not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=['Doctor Medical Records']
+    )
     
     def post(self, request):
         try:
@@ -855,6 +1848,53 @@ class MedicalRecordByIdView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
     
+    @swagger_auto_schema(
+        # get
+        operation_summary="Get medical record by ID",
+        operation_description="Get a medical record by ID. Requires doctor privileges.",
+        responses={
+            200: openapi.Response(
+                description="Medical record details",
+                schema=MedicalRecordSerializer
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "User not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            ),
+            openapi.Parameter(
+                name='id',
+                in_=openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                required=True,
+                description="Medical record ID"
+            )
+        ],
+        tags=['Doctor Medical Records']
+    
+    )
+    
     def get(self, request, id):
         try:
             user= request.user
@@ -873,6 +1913,71 @@ class MedicalRecordByIdView(APIView):
             return Response(serializer.data)
         except Exception as e:
             return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+        
+    @swagger_auto_schema(
+        # put
+        operation_summary="Update medical record by ID",
+        operation_description="Update a medical record by ID. Requires doctor privileges.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'record_type': openapi.Schema(type=openapi.TYPE_STRING),
+                'title': openapi.Schema(type=openapi.TYPE_STRING),
+                'description': openapi.Schema(type=openapi.TYPE_STRING),
+                'date_recorded': openapi.Schema(type=openapi.TYPE_STRING),
+                'file': openapi.Schema(type=openapi.TYPE_FILE),
+                'is_sensitive': openapi.Schema(type=openapi.TYPE_BOOLEAN)
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                description="Medical record updated successfully",
+                schema=MedicalRecordSerializer
+            ),
+            400: openapi.Response(
+                description="Bad Request",
+                examples={
+                    "application/json": {
+                        "message": "Duplicate medical record found"
+                    }
+                }
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "User not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            ),
+            openapi.Parameter(
+                name='id',
+                in_=openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                required=True,
+                description="ID of the medical record to update"
+            )
+        ],
+        tags=['Doctor Medical Records']
+    )
 
     def put(self, request, id):
         try:
@@ -915,6 +2020,52 @@ class MedicalRecordByIdView(APIView):
         except Exception as e:
             return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
         
+    @swagger_auto_schema(
+        # delete
+        operation_summary="Delete medical record by ID",
+        operation_description="Delete a medical record by ID. Requires doctor privileges.",
+        responses={
+            204: openapi.Response(
+                description="Medical record deleted successfully"
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "User not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            ),
+            openapi.Parameter(
+                name='id',
+                in_=openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                required=True,
+                description="ID of the medical record to delete"
+            )
+        ],
+        tags=['Doctor Medical Records']
+   
+    )
+        
     def delete(self, request, id):
         try:
             user= request.user
@@ -937,6 +2088,46 @@ class MedicalRecordByIdView(APIView):
 class GetAllMedicalRecordView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
+    
+    @swagger_auto_schema(
+        # get
+        operation_summary="Get all medical records",
+        operation_description="Get all medical records. Requires doctor or admin privileges.",
+        responses={
+            200: openapi.Response(
+                description="List of medical records",
+                schema=MedicalRecordSerializer(many=True)
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "User not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=['Doctor Medical Records']
+
+    )
 
     def get(self, request):
         user= request.user
@@ -961,6 +2152,46 @@ class GetAllMedicalRecordView(APIView):
 class PrescriptionView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
+    
+    @swagger_auto_schema(
+        # get
+        operation_summary="Authenticated Staff all prescriptions",
+        operation_description="Authenticated Staff all prescriptions. Requires doctor or admin privileges.",
+        responses={
+            200: openapi.Response(
+                description="List of prescriptions",
+                schema=PrescriptionSerializer(many=True)
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "User not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=['Medical Records Prescriptions']
+
+    )
 
     def get(self, request):
         user= request.user
@@ -981,6 +2212,67 @@ class PrescriptionView(APIView):
 
         serializer = PrescriptionSerializer(prescriptions, many=True)
         return Response(serializer.data)
+    
+    @swagger_auto_schema(
+        # post
+        operation_summary="Create prescription",
+        operation_description="Create a prescription. Requires doctor privileges.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'medication_name': openapi.Schema(type=openapi.TYPE_STRING),
+                'dosage': openapi.Schema(type=openapi.TYPE_STRING),
+                'frequency': openapi.Schema(type=openapi.TYPE_STRING),
+                'start_date': openapi.Schema(type=openapi.TYPE_STRING),
+                'end_date': openapi.Schema(type=openapi.TYPE_STRING),
+                'refills_remaining': openapi.Schema(type=openapi.TYPE_INTEGER),
+                'instructions': openapi.Schema(type=openapi.TYPE_STRING),
+            },
+            required= ['medical_record_id', 'medication_name', 'dosage', 'frequency', 'start_date', 'refills_remaining', 'instructions']
+        ),
+        responses={
+            201: openapi.Response(
+                description="Prescription created successfully",
+                schema=PrescriptionSerializer
+            ),
+            400: openapi.Response(
+                description="Bad Request",
+                examples={
+                    "application/json": {
+                        "message": "Medical record id is required"
+                    }
+                }
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "User not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=['Medical Records Prescriptions']
+
+    )
 
     def post(self, request):
         try:
@@ -1052,6 +2344,46 @@ class PrescriptionView(APIView):
 class GetAllPrescriptionView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
+    
+    @swagger_auto_schema(
+        # get
+        operation_summary="Get all prescriptions",
+        operation_description="Get all prescriptions. Requires doctor or admin privileges.",
+        responses={
+            200: openapi.Response(
+                description="List of prescriptions",
+                schema=PrescriptionSerializer(many=True)
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "User not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=['Medical Records Prescriptions']
+
+    )
 
     def get(self, request):
         user= request.user
@@ -1078,6 +2410,53 @@ class PrescriptionByIdView(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
     
+    @swagger_auto_schema(
+        # get
+        operation_summary="Get prescription by id",
+        operation_description="Get prescription by id. Requires doctor or admin privileges.",
+        responses={
+            200: openapi.Response(
+                description="Prescription",
+                schema=PrescriptionSerializer()
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "User not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            ),
+            openapi.Parameter(
+                name='id',
+                in_=openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                required=True,
+                description="ID of the prescription to get"
+            )
+        ],
+        tags=['Medical Records Prescriptions']
+
+    )
+    
     def get(self, request, id):
         try:
             user= request.user
@@ -1103,6 +2482,65 @@ class PrescriptionByIdView(APIView):
             return Response(serializer.data)
         except Exception as e:
             return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+        
+    @swagger_auto_schema(
+        # put
+        operation_summary="Update prescription by id",
+        operation_description="Update prescription by id. Requires doctor or admin privileges.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'medication_name': openapi.Schema(type=openapi.TYPE_STRING),
+                'dosage': openapi.Schema(type=openapi.TYPE_STRING),
+                'frequency': openapi.Schema(type=openapi.TYPE_STRING),
+                'start_date': openapi.Schema(type=openapi.TYPE_STRING),
+                'end_date': openapi.Schema(type=openapi.TYPE_STRING),
+                'refills_remaining': openapi.Schema(type=openapi.TYPE_INTEGER),
+                'instructions': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                description="Prescription",
+                schema=PrescriptionSerializer()
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "User not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            ),
+            openapi.Parameter(
+                name='id',
+                in_=openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                required=True,
+                description="ID of the prescription to update"
+            )
+        ],
+        tags=['Medical Records Prescriptions']
+
+    )
     
     def put(self, request, id):
         try:
@@ -1155,6 +2593,57 @@ class PrescriptionByIdView(APIView):
             return Response(serializer.data)
         except Exception as e:
             return Response({'message': str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+        
+    @swagger_auto_schema(
+        # delete
+        operation_summary="Delete prescription by id",
+        operation_description="Delete prescription by id. Requires doctor or admin privileges.",
+        responses={
+            200: openapi.Response(
+                description="Prescription deleted successfully",
+                examples={
+                    "application/json": {
+                        "message": "Prescription deleted successfully"
+                    }
+                }
+            ),
+            403: openapi.Response(
+                description="Forbidden",
+                examples={
+                    "application/json": {
+                        "message": "Only doctors or admins can perform this action"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "User not found"
+                    }
+                }
+            )
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name='Authorization',
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            ),
+            openapi.Parameter(
+                name='id',
+                in_=openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                required=True,
+                description="ID of the prescription to delete"
+            )
+        ],
+        tags=['Medical Records Prescriptions']
+
+    )
     
     def delete(self, request, id):
         try:
@@ -1185,6 +2674,28 @@ class PrescriptionByIdView(APIView):
 class GetNotifications(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
+    
+    @swagger_auto_schema(
+        operation_summary='Get all notifications',
+        operation_description="Get all notifications",
+        responses={
+            200: openapi.Response(
+                description="List of notifications",
+                schema=NotificationSerializer(many=True)
+            ),
+            404: "User not found"
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                'Authorization',
+                openapi.IN_HEADER,
+                description='Bearer <token>',
+                type=openapi.TYPE_STRING
+            )
+        ],
+        tags=["Doctor's Notifications"]
+    )
 
     def get(self, request):
         user= request.user
@@ -1198,6 +2709,43 @@ class GetNotifications(APIView):
 class NotificationById(APIView):
     permission_classes = [IsAuthenticated, TokenHasReadWriteScope]
     authentication_classes = [OAuth2Authentication]
+    
+    @swagger_auto_schema(
+        operation_summary='Get notifications by ID',
+        operation_description="Get notification by ID",
+        responses={
+            200: openapi.Response(
+                description="Notification by ID",
+                schema=NotificationSerializer()
+            ),
+            404: openapi.Response(
+                description="Not Found",
+                examples={
+                    "application/json": {
+                        "message": "User not found"
+                    }
+                }
+            ),
+        },
+        
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                'id',
+                openapi.IN_PATH,
+                description='Notification ID',
+                type=openapi.TYPE_INTEGER
+            ),
+            openapi.Parameter(
+                'Authorization',
+                openapi.IN_HEADER,
+                description='Bearer <token>',
+                type=openapi.TYPE_STRING
+            )
+        ],
+        tags=["Doctor's Notifications"]
+   
+    )
 
     def get(self, request, id):
         user= request.user
@@ -1207,6 +2755,41 @@ class NotificationById(APIView):
         notification = get_object_or_404(Notification, id=id)
         serializer = NotificationSerializer(notification)
         return Response(serializer.data)
+    
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'is_read': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Is read')
+            }
+        ),
+        operation_summary='Mark notification as read',
+        operation_description="Mark notification as read",
+        responses={
+            200: openapi.Response(
+                description="Notification",
+                schema=NotificationSerializer()
+            ),
+            404: "User not found"
+        },
+        security=[{'Bearer': []}],
+        manual_parameters=[
+            openapi.Parameter(
+                'id',
+                openapi.IN_PATH,
+                description='Notification ID',
+                type=openapi.TYPE_INTEGER
+            ),
+            openapi.Parameter(
+                'Authorization',
+                openapi.IN_HEADER,
+                description='Bearer <token>',
+                type=openapi.TYPE_STRING
+            )
+        ],
+        tags=["Doctor's Notifications"]
+   
+    )
 
     def put(self, request, id):
         user= request.user
