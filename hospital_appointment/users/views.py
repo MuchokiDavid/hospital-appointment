@@ -14,11 +14,49 @@ import json
 from datetime import datetime, timedelta
 import decouple
 from .utility import *
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 client_id= decouple.config('CLIENT_ID')
 client_secret= decouple.config('CLIENT_SECRET')
     
 class RegisterUser(APIView):
+    @swagger_auto_schema(
+        operation_summary="Create user account",
+        operation_description="Create user account",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['username', 'password', 'email', 'phone_number', 'user_type'],
+            properties={
+                'username': openapi.Schema(type=openapi.TYPE_STRING),
+                'password': openapi.Schema(type=openapi.TYPE_STRING),
+                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                'phone_number': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description='Phone number in the format +254XXXXXXXXX'
+                    ),
+                'user_type': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description='User type, either DOCTOR or ADMIN',
+                    enum=['DOCTOR', 'ADMIN']
+                    ),
+                'specializations': openapi.Schema(
+                    type=openapi.TYPE_ARRAY, 
+                    items=openapi.Schema(type=openapi.TYPE_INTEGER),
+                    description='List of specialization IDs, Fetched from specialisation endpoint'
+                    )
+            },
+        ),
+        responses={
+            201: openapi.Response('User created successfully',
+                                  schema=UserSerializer
+                                ),
+            400: openapi.Response('Bad request'),
+            500: openapi.Response('Internal server error')
+        },
+        tags=["User Accounts"]
+    )
+    
     def post(self, request, format=None):
         try:
             data= request.data
@@ -71,6 +109,48 @@ class RegisterUser(APIView):
             return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
 class Login(APIView):
+    @swagger_auto_schema(
+        operation_summary="Login user",
+        operation_description="Login user",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['username', 'password'],
+            properties={
+                'username': openapi.Schema(type=openapi.TYPE_STRING),
+                'password': openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        ),
+        responses={
+            200: openapi.Response('User logged in successfully',
+                                    schema=(openapi.Schema(
+                                    type=openapi.TYPE_OBJECT,
+                                    required=['username', 'password'],
+                                    properties={
+                                        'access_token': openapi.Schema(type=openapi.TYPE_STRING),
+                                        'expires_in': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                        'token_type': openapi.Schema(type=openapi.TYPE_STRING),
+                                        'scope': openapi.Schema(type=openapi.TYPE_STRING),
+                                        'refresh_token': openapi.Schema(type=openapi.TYPE_STRING),
+                                        'user': openapi.Schema(
+                                            type=openapi.TYPE_OBJECT,
+                                            properties={
+                                                'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                                'username': openapi.Schema(type=openapi.TYPE_STRING),
+                                                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                                                'phone_number': openapi.Schema(type=openapi.TYPE_STRING),
+                                                'user_type': openapi.Schema(type=openapi.TYPE_STRING),
+                                            }
+                                        )
+                                    }
+                                  )
+                                  ) 
+                                ),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        tags=["User Accounts"]
+    )
     def post(self, request, format=None):
         try:
             username = request.data.get('username')
@@ -127,6 +207,28 @@ class Login(APIView):
 class Logout(APIView):
     authentication_classes= [OAuth2Authentication]
     permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
+    
+    @swagger_auto_schema(
+        operation_summary="Logout user",
+        operation_description="Logout user",
+        responses={
+            200: openapi.Response('User logged out successfully'),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        security=[{"Bearer": []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name="Authorization",
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=["User Accounts"]
+    )
 
     def post(self, request, format=None):
         tokens=  AccessToken.objects.filter(user=request.user)
@@ -145,6 +247,42 @@ class Logout(APIView):
 class UserList(APIView):
     authentication_classes= [OAuth2Authentication]
     permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
+    
+    @swagger_auto_schema(
+        operation_summary="Get user list",
+        operation_description="Get user list",
+        responses={
+            200: openapi.Response('User list',
+                                    schema=openapi.Schema(
+                                        type=openapi.TYPE_ARRAY,
+                                        items=openapi.Schema(
+                                            type=openapi.TYPE_OBJECT,
+                                            properties={
+                                                'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                                'username': openapi.Schema(type=openapi.TYPE_STRING),
+                                                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                                                'phone_number': openapi.Schema(type=openapi.TYPE_STRING),
+                                                'user_type': openapi.Schema(type=openapi.TYPE_STRING),
+                                            }
+                                        )
+                                    )
+                                ),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        security=[{"Bearer": []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name="Authorization",
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=["User Accounts"]
+    )
 
     def get(self, request, format=None):
         users = UserDetails.objects.all()
@@ -155,6 +293,39 @@ class UserList(APIView):
 class StaffViewUserById(APIView):
     authentication_classes= [OAuth2Authentication]
     permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
+    
+    @swagger_auto_schema(
+        operation_summary="Get user by id",
+        operation_description="Get user by id",
+        responses={
+            200: openapi.Response('User',
+                                    schema=openapi.Schema(
+                                        type=openapi.TYPE_OBJECT,
+                                        properties={
+                                            'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                            'username': openapi.Schema(type=openapi.TYPE_STRING),
+                                            'email': openapi.Schema(type=openapi.TYPE_STRING),
+                                            'phone_number': openapi.Schema(type=openapi.TYPE_STRING),
+                                            'user_type': openapi.Schema(type=openapi.TYPE_STRING),
+                                        }
+                                    )
+                                ),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        security=[{"Bearer": []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name="Authorization",
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=["User Accounts"]
+    )
 
     def get(self, request, id, format=None):
         try:
@@ -170,6 +341,48 @@ class StaffViewUserById(APIView):
             return Response(serializer.data)
         except UserDetails.DoesNotExist:
             return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+    @swagger_auto_schema(
+        operation_summary="Update user by id",
+        operation_description="Update user by id",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'username': openapi.Schema(type=openapi.TYPE_STRING),
+                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                'phone_number': openapi.Schema(type=openapi.TYPE_STRING),
+                'user_type': openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        ),
+        responses={
+            200: openapi.Response('User updated successfully',
+                                    schema=openapi.Schema(
+                                        type=openapi.TYPE_OBJECT,
+                                        properties={
+                                            'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                            'username': openapi.Schema(type=openapi.TYPE_STRING),
+                                            'email': openapi.Schema(type=openapi.TYPE_STRING),
+                                            'phone_number': openapi.Schema(type=openapi.TYPE_STRING),
+                                            'user_type': openapi.Schema(type=openapi.TYPE_STRING),
+                                        }
+                                    )
+                                ),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        security=[{"Bearer": []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name="Authorization",
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=["User Accounts"]
+   )
         
     def put(self, request, id, format=None):
         try:
@@ -188,13 +401,33 @@ class StaffViewUserById(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except UserDetails.DoesNotExist:
             return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-    
-class Redirect(APIView):
-    def get(self, request, format=None):
-        return Response({'message': 'Hospital Appointment System!'})
 
 # Get specializations--------------------------------------------------------------
 class GetSpecializationsView(APIView):    
+    
+    @swagger_auto_schema(
+        operation_summary="Get specializations",
+        operation_description="Get specializations",
+        responses={
+            200: openapi.Response('Specializations',
+                                    schema=openapi.Schema(
+                                        type=openapi.TYPE_ARRAY,
+                                        items=openapi.Schema(
+                                            type=openapi.TYPE_OBJECT,
+                                            properties={
+                                                'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                                'name': openapi.Schema(type=openapi.TYPE_STRING),
+                                                'description': openapi.Schema(type=openapi.TYPE_STRING),
+                                            }
+                                        )
+                                    )
+                                ),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        tags=["Specializations"]
+    )
     def get(self, request, format=None):
         try:
             specializations = Specialization.objects.all()
@@ -206,7 +439,36 @@ class GetSpecializationsView(APIView):
 #Add specialization -----------------------------------------------------------------
 class PostSpecializationView(APIView):
     authentication_classes= [OAuth2Authentication]
-    permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]            
+    permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]     
+    
+    @swagger_auto_schema(
+        operation_summary="Add specialization",
+        operation_description="Add specialization",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'name': openapi.Schema(type=openapi.TYPE_STRING),
+                'description': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        ),
+        responses={
+            201: openapi.Response('Specialization created successfully',SpecializationSerializer),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        security=[{"Bearer": []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name="Authorization",
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=["Specializations"]
+    )       
     def post(self, request, format=None):
         try:
             data= request.data
@@ -216,7 +478,7 @@ class PostSpecializationView(APIView):
                 return Response({'message': 'Please provide name and description'}, status=status.HTTP_400_BAD_REQUEST)
             specialization= Specialization.objects.create(name=name, description=description)
             specialization.save()
-            return Response({'message': 'Specialization created successfully'}, status=status.HTTP_201_CREATED)
+            return Response({'message': 'Specialization created successfully', 'specialization': SpecializationSerializer(specialization).data}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -224,6 +486,29 @@ class PostSpecializationView(APIView):
 class DoctorProfileView(APIView):
     authentication_classes= [OAuth2Authentication]
     permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
+    
+    @swagger_auto_schema(
+        operation_summary="Get doctor profile",
+        operation_description="Get doctor profile",
+        responses={
+            200: openapi.Response('Doctor profile',DoctorSerializer ),
+            400: openapi.Response('Bad request'),
+            404: openapi.Response('Doctor not found'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        security=[{"Bearer": []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name="Authorization",
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=["Staff"]
+    )
 
     def get(self, request, format=None):
         try:
@@ -235,6 +520,37 @@ class DoctorProfileView(APIView):
             return Response(serializer.data)
         except Exception as e:
             return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+    @swagger_auto_schema(
+        operation_summary="Update doctor profile",
+        operation_description="Update doctor profile",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'years_of_experience': openapi.Schema(type=openapi.TYPE_INTEGER),
+                'is_available': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                'is_verified': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+            }
+        ),
+        responses={
+            200: openapi.Response('Doctor profile updated successfully', DoctorSerializer),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        security=[{"Bearer": []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name="Authorization",
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=["Staff"]
+   
+    )
 
     def put(self, request, format=None):
         try:
@@ -254,6 +570,28 @@ class DoctorProfileView(APIView):
 class GetDoctorsListView(APIView):
     authentication_classes= [OAuth2Authentication]
     permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
+    
+    @swagger_auto_schema(
+        operation_summary="Get doctors list",
+        operation_description="Get doctors list",
+        responses={
+            200: openapi.Response('Doctors list', DoctorSerializer(many=True)),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        security=[{"Bearer": []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name="Authorization",
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=["Staff"]
+    )
 
     def get(self, request, format=None):
         try:
@@ -267,6 +605,29 @@ class GetDoctorsListView(APIView):
 class GetDoctorByIdView(APIView):
     authentication_classes= [OAuth2Authentication]
     permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
+    
+    @swagger_auto_schema(
+        operation_summary="Get doctor by id",
+        operation_description="Get doctor by id",
+        responses={
+            200: openapi.Response('Doctor', DoctorSerializer),
+            400: openapi.Response('Bad request'),
+            404: openapi.Response('Doctor not found'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        security=[{"Bearer": []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name="Authorization",
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=["Staff"]
+   )
 
     def get(self, request, id, format=None):
         try:
@@ -280,6 +641,45 @@ class GetDoctorByIdView(APIView):
 class RegisterPatient(APIView):
     authentication_classes= [OAuth2Authentication]
     permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
+    
+    @swagger_auto_schema(
+        operation_summary="Register patient",
+        operation_description="Register patient",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'phone_number': openapi.Schema(type=openapi.TYPE_STRING),
+                'date_of_birth': openapi.Schema(type=openapi.TYPE_STRING),
+                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                'first_name': openapi.Schema(type=openapi.TYPE_STRING),
+                'last_name': openapi.Schema(type=openapi.TYPE_STRING),
+                'gender': openapi.Schema(type=openapi.TYPE_STRING),
+                'address': openapi.Schema(type=openapi.TYPE_STRING),
+                'insuarance_provider': openapi.Schema(type=openapi.TYPE_STRING),
+                'insuarance_policy': openapi.Schema(type=openapi.TYPE_STRING),
+                'emergency_contact_name': openapi.Schema(type=openapi.TYPE_STRING),
+                'emergency_contact_phone': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        ),
+        responses={
+            201: openapi.Response('Patient registered successfully', PatientSerializer),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        security=[{"Bearer": []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name="Authorization",
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=["Patients"]
+    
+    )
     
     def post(self, request, format=None):
         user= request.user
@@ -337,6 +737,28 @@ class RegisterPatient(APIView):
 class PatientListView(APIView):
     authentication_classes= [OAuth2Authentication]
     permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
+    
+    @swagger_auto_schema(
+        operation_summary="Get patients list",
+        operation_description="Get patients list",
+        responses={
+            200: openapi.Response('Patients list', PatientSerializer(many=True)),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        security=[{"Bearer": []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name="Authorization",
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=["Patients"]
+    )
 
     def get(self, request, format=None):
         try:
@@ -351,6 +773,27 @@ class PatientListView(APIView):
 class PatientProfileView(APIView):
     authentication_classes= [OAuth2Authentication]
     permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
+    
+    @swagger_auto_schema(
+        operation_summary="Get patient profile",
+        operation_description="Get patient profile",
+        responses={
+            200: openapi.Response('Patient profile', PatientSerializer),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        security=[{"Bearer": []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name="Authorization",
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=["Patients"])
 
     def get(self, request, id, format=None):
         try:
@@ -368,6 +811,43 @@ class PatientProfileView(APIView):
             return Response(serializer.data)
         except Exception as e:
             return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+    @swagger_auto_schema(
+        operation_summary="Update patient profile",
+        operation_description="Update patient profile",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'phone_number': openapi.Schema(type=openapi.TYPE_STRING),
+                'date_of_birth': openapi.Schema(type=openapi.TYPE_STRING),
+                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                'first_name': openapi.Schema(type=openapi.TYPE_STRING),
+                'last_name': openapi.Schema(type=openapi.TYPE_STRING),
+                'gender': openapi.Schema(type=openapi.TYPE_STRING),
+                'address': openapi.Schema(type=openapi.TYPE_STRING),
+                'insuarance_provider': openapi.Schema(type=openapi.TYPE_STRING),
+                'insuarance_policy': openapi.Schema(type=openapi.TYPE_STRING),
+                'emergency_contact_name': openapi.Schema(type=openapi.TYPE_STRING),
+                'emergency_contact_phone': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        ),
+        responses={
+            200: openapi.Response('Patient profile updated successfully', PatientSerializer),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        security=[{"Bearer": []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name="Authorization",
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=["Patients"])
 
     def put(self, request, id, format=None):
         try:
@@ -392,18 +872,43 @@ class PatientProfileView(APIView):
 #  Patient search view  ----------------------------------------------------------------------------------
 class PatientSearchView(APIView):
     permission_classes = [IsAuthenticated]
+    
+    @swagger_auto_schema(
+        operation_summary="Search patients",
+        operation_description="Search patients",
+        responses={
+            200: openapi.Response('Patients list', PatientSerializer(many=True)),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+            500: openapi.Response('Internal server error')
+        },
+        security=[{"Bearer": []}],
+        manual_parameters=[
+            openapi.Parameter(
+                name="Authorization",
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="Bearer token for authentication"
+            )
+        ],
+        tags=["Patients"]
+    )
 
     def get(self, request):
-        search_term = request.query_params.get('q', '')
-        
-        patients = Patient.objects.filter(
-            models.Q(user__first_name__icontains=search_term) |
-            models.Q(user__last_name__icontains=search_term) |
-            models.Q(user__email__icontains=search_term) |
-            models.Q(user__phone_number__icontains=search_term)
-        )[:15]
-        
-        serializer = PatientSerializer(patients, many=True)
-        return Response(serializer.data) 
+        try:
+            search_term = request.query_params.get('q', '')
+            
+            patients = Patient.objects.filter(
+                models.Q(user__first_name__icontains=search_term) |
+                models.Q(user__last_name__icontains=search_term) |
+                models.Q(user__email__icontains=search_term) |
+                models.Q(user__phone_number__icontains=search_term)
+            )[:15]
+            
+            serializer = PatientSerializer(patients, many=True)
+            return Response(serializer.data) 
+        except Exception as e:
+            return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
     
