@@ -128,7 +128,7 @@ We provide comprehensive interactive documentation for all API endpoints:
 | Documentation Type | URL |
 |--------------------|-----|
 | **Swagger UI** (Interactive) | [https://hospital-appointment-tvid.onrender.com/swagger/](https://hospital-appointment-tvid.onrender.com/swagger/) |
-| **ReDoc** (Alternative) | [https://hospital-appointment-tvid.onrender.com/documentation/]([https://hospital-appointment-tvid.onrender.com/documentation/) |
+| **ReDoc** (Alternative) | [https://hospital-appointment-tvid.onrender.com/documentation/](https://hospital-appointment-tvid.onrender.com/documentation/) |
 
 **Features:**
 - Try-it-out functionality for testing endpoints
