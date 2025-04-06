@@ -53,7 +53,7 @@ class AvailabilityScheduleView(APIView):
                 }
             )
         },
-        tags=["Doctor's Availability Schedule"]
+        tags=["Availability Schedule"]
     )
 
     def get(self, request):
@@ -151,7 +151,7 @@ class AvailabilityScheduleView(APIView):
             )
         },
         security=[{'Bearer': []}],
-        tags=["Doctor's Availability Schedule"]
+        tags=["Availability Schedule"]
     )
 
     def post(self, request):
@@ -313,7 +313,7 @@ class AvailabilityScheduleByIdView(APIView):
             )
         },
         security=[{'Bearer': []}],
-        tags=["Doctor's Availability Schedule"]
+        tags=["Availability Schedule"]
     )
 
     def put(self, request, id):
@@ -369,7 +369,7 @@ class AvailabilityScheduleByIdView(APIView):
             )
         },
         security=[{'Bearer': []}],
-        tags=["Doctor's Availability Schedule"]
+        tags=["Availability Schedule"]
     )
 
     def delete(self, request, id):
@@ -405,7 +405,7 @@ class GetAllAvailabilityScheduleView(APIView):
                 }
             )
         },
-        tags=["Doctor's Availability Schedule"]
+        tags=["Availability Schedule"]
     )
 
     def get(self, request):
@@ -450,7 +450,7 @@ class TimeOffView(APIView):
                 }
             )
         },
-        tags=["Doctor Time-Offs"]
+        tags=["Time-Offs"]
     )
 
     def get(self, request):
@@ -557,7 +557,7 @@ class TimeOffView(APIView):
                 description="Bearer token for authentication"
             )
         ],
-        tags=['Doctor Time-Offs']
+        tags=['Time-Offs']
     )
 
     def post(self, request):
@@ -754,7 +754,7 @@ class TimeOffByIdView(APIView):
             )
         },
         security=[{'Bearer': []}],
-        tags=['Doctor Time-Offs']
+        tags=['Time-Offs']
     )
 
     def put(self, request, id):
@@ -856,7 +856,7 @@ class TimeOffByIdView(APIView):
             )
         },
         security=[{'Bearer': []}],
-        tags=["Doctor Time-Offs"]
+        tags=["Time-Offs"]
     )
 
     def delete(self, request, id):
@@ -915,7 +915,7 @@ class GetAllTimeOffView(APIView):
             )
         },
         security=[{'Bearer': []}],
-        tags=['Doctor Time-Offs']
+        tags=['Time-Offs']
     )
 
     def get(self, request):
@@ -936,7 +936,7 @@ class AppointmentView(APIView):
     authentication_classes = [OAuth2Authentication]
     
     @swagger_auto_schema(
-        operation_summary="Authenticated doctor appointments",
+        operation_summary="Authenticated Appointments",
         operation_description="Retrieve a list of all appointments for the current doctor. Requires doctor/admin privileges.",
         responses={
             200: openapi.Response(
@@ -970,7 +970,7 @@ class AppointmentView(APIView):
                 description="Bearer token for authentication"
             )
         ],
-        tags=['Doctor Appointments']
+        tags=['Appointments']
     )
     
     def get(self, request):
@@ -1044,7 +1044,7 @@ class AppointmentView(APIView):
                 description="Bearer token for authentication"
             )
         ],
-        tags=['Doctor Appointments']
+        tags=['Appointments']
    
     )
 
@@ -1273,7 +1273,7 @@ class AppointmentByIdView(APIView):
                 description="Appointment ID"
             )
         ],
-        tags=['Doctor Appointments']
+        tags=['Appointments']
     )
     
     def get(self, request, id):
@@ -1353,7 +1353,7 @@ class AppointmentByIdView(APIView):
                 description="Appointment ID"
             )
         ],
-        tags=['Doctor Appointments']
+        tags=['Appointments']
     )
 
     def put(self, request, id):
@@ -1482,7 +1482,7 @@ class AppointmentByIdView(APIView):
                 description="Appointment ID"
             )
         ],
-        tags=['Doctor Appointments']
+        tags=['Appointments']
     )
 
     def delete(self, request, id):
@@ -1599,7 +1599,7 @@ class GetAllAppointmentView(APIView):
                 description="Bearer token for authentication"
             )
         ],
-        tags=['Doctor Appointments']
+        tags=['Appointments']
     )
 
     def get(self, request):
@@ -1624,7 +1624,7 @@ class MedicalRecordView(APIView):
     
     @swagger_auto_schema(
         # get
-        operation_summary="Authenticated doctor medical records",
+        operation_summary="Authenticated Medical Records",
         operation_description="Get a list of medical records. Requires doctor privileges.",
         responses={
             200: openapi.Response(
@@ -1658,7 +1658,7 @@ class MedicalRecordView(APIView):
                 description="Bearer token for authentication"
             )
         ],
-        tags=['Doctor Medical Records']
+        tags=['Medical Records']
     )
     
     def get(self, request):
@@ -1739,7 +1739,7 @@ class MedicalRecordView(APIView):
                 description="Bearer token for authentication"
             )
         ],
-        tags=['Doctor Medical Records']
+        tags=['Medical Records']
     )
     
     def post(self, request):
@@ -1889,7 +1889,7 @@ class MedicalRecordByIdView(APIView):
                 description="Medical record ID"
             )
         ],
-        tags=['Doctor Medical Records']
+        tags=['Medical Records']
     
     )
     
@@ -1974,7 +1974,7 @@ class MedicalRecordByIdView(APIView):
                 description="ID of the medical record to update"
             )
         ],
-        tags=['Doctor Medical Records']
+        tags=['Medical Records']
     )
 
     def put(self, request, id):
@@ -2060,7 +2060,7 @@ class MedicalRecordByIdView(APIView):
                 description="ID of the medical record to delete"
             )
         ],
-        tags=['Doctor Medical Records']
+        tags=['Medical Records']
    
     )
         
@@ -2123,7 +2123,7 @@ class GetAllMedicalRecordView(APIView):
                 description="Bearer token for authentication"
             )
         ],
-        tags=['Doctor Medical Records']
+        tags=['Medical Records']
 
     )
 
@@ -2187,7 +2187,7 @@ class PrescriptionView(APIView):
                 description="Bearer token for authentication"
             )
         ],
-        tags=['Medical Records Prescriptions']
+        tags=['Prescriptions']
 
     )
 
@@ -2268,7 +2268,7 @@ class PrescriptionView(APIView):
                 description="Bearer token for authentication"
             )
         ],
-        tags=['Medical Records Prescriptions']
+        tags=['Prescriptions']
 
     )
 
@@ -2379,7 +2379,7 @@ class GetAllPrescriptionView(APIView):
                 description="Bearer token for authentication"
             )
         ],
-        tags=['Medical Records Prescriptions']
+        tags=['Prescriptions']
 
     )
 
@@ -2451,7 +2451,7 @@ class PrescriptionByIdView(APIView):
                 description="ID of the prescription to get"
             )
         ],
-        tags=['Medical Records Prescriptions']
+        tags=['Prescriptions']
 
     )
     
@@ -2536,7 +2536,7 @@ class PrescriptionByIdView(APIView):
                 description="ID of the prescription to update"
             )
         ],
-        tags=['Medical Records Prescriptions']
+        tags=['Prescriptions']
 
     )
     
@@ -2639,7 +2639,7 @@ class PrescriptionByIdView(APIView):
                 description="ID of the prescription to delete"
             )
         ],
-        tags=['Medical Records Prescriptions']
+        tags=['Prescriptions']
 
     )
     
@@ -2692,7 +2692,7 @@ class GetNotifications(APIView):
                 type=openapi.TYPE_STRING
             )
         ],
-        tags=["Doctor's Notifications"]
+        tags=["Notifications"]
     )
 
     def get(self, request):
@@ -2741,7 +2741,7 @@ class NotificationById(APIView):
                 type=openapi.TYPE_STRING
             )
         ],
-        tags=["Doctor's Notifications"]
+        tags=["Notifications"]
    
     )
 
@@ -2785,7 +2785,7 @@ class NotificationById(APIView):
                 type=openapi.TYPE_STRING
             )
         ],
-        tags=["Doctor's Notifications"]
+        tags=["Notifications"]
    
     )
 
