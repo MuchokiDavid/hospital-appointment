@@ -24,9 +24,13 @@ from rest_framework import permissions
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="Hospital Appointment System",
+        title="Healthcare Appointment Scheduling System API",
         default_version='v1',
-        description="Hospital Appointment System API",
+        description="""A secure backend service for managing patient appointments and doctor schedules.
+        Includes patient management, doctor scheduling, and medical records.""",
+        # terms_of_service="https://yourhealthcareapp.com/terms/",
+        contact=openapi.Contact(email="support@yourhealthcareapp.com"),
+        license=openapi.License(name="MIT License"),
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
