@@ -120,6 +120,7 @@ For production deployment:
 2. Configure a production database
 3. Set up a proper web server (Gunicorn recommended)
 4. Configure static files collection
+5. Deployment link: [https://hospital-appointment-tvid.onrender.com](https://hospital-appointment-tvid.onrender.com/)
 
 ## API Documentation
 
@@ -127,8 +128,8 @@ We provide comprehensive interactive documentation for all API endpoints:
 
 | Documentation Type | URL |
 |--------------------|-----|
-| **Swagger UI** (Interactive) | [https://hospital-appointment-tvid.onrender.com/swagger/](https://hospital-appointment-tvid.onrender.com/swagger/) |
-| **ReDoc** (Alternative) | [https://hospital-appointment-tvid.onrender.com/documentation/](https://hospital-appointment-tvid.onrender.com/documentation/) |
+| **Swagger UI** (Interactive) | [https://hospital-appointment-tvid.onrender.com/swagger](https://hospital-appointment-tvid.onrender.com/swagger/) |
+| **ReDoc** (Alternative) | [https://hospital-appointment-tvid.onrender.com/documentation](https://hospital-appointment-tvid.onrender.com/documentation/) |
 
 **Features:**
 - Try-it-out functionality for testing endpoints
@@ -153,3 +154,5 @@ Distributed under the MIT License. See `LICENSE` for more information.
 Project Maintainer - [David Muchoki](mailto:dmmuchoki7@gmail.com)
 
 Project Link: [https://github.com/MuchokiDavid/hospital-appointment](https://github.com/MuchokiDavid/hospital-appointment)
+
+Deployment Link: [https://hospital-appointment-tvid.onrender.com](https://hospital-appointment-tvid.onrender.com/)
