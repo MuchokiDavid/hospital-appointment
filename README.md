@@ -110,7 +110,7 @@ cd hospital_appointment/
 python3 manage.py createsuperuser
 ```
 **2. Deployment**
-- For the deployed version, access admin via `https://hospital-appointment-tvid.onrender.com/admin/`
+- For the deployed version, access admin via [https://hospital-appointment-tvid.onrender.com/admin](https://hospital-appointment-tvid.onrender.com/admin/)
 
 ```bash
 #Credentials
@@ -137,7 +137,6 @@ For production deployment:
 2. Configure a production database
 3. Set up a proper web server (Gunicorn recommended)
 4. Configure static files collection
-5. Deployment link: [https://hospital-appointment-tvid.onrender.com](https://hospital-appointment-tvid.onrender.com/)
 
 ## API Documentation
 
