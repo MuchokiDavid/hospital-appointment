@@ -101,7 +101,7 @@ The system includes a powerful admin interface with:
 - Raw ID fields for better performance
 
 ### Admin Interface Access
-1. Localhost
+**1. Localhost**
 - Access your development admin panel at `http://localhost:8000/admin/`
 
 ```bash
@@ -109,7 +109,7 @@ The system includes a powerful admin interface with:
 cd hospital_appointment/
 python3 manage.py createsuperuser
 ```
-2. Deployment
+**2. Deployment**
 - For the deployed version, access admin via `https://hospital-appointment-tvid.onrender.com/admin/`
 
 ```bash
