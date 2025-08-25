@@ -12,9 +12,11 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from decouple import config
+from urllib.parse import urlparse, parse_qsl
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+tmpPostgres = urlparse(config("DATABASE_URL"))
 
 
 # Quick-start development settings - unsuitable for production
@@ -27,7 +29,9 @@ SECRET_KEY = "django-insecure-0u%pipcxfalfc$nfep$+@w@$b67)4m)sg_$18+-^(46217r3=j
 DEBUG = True
 
 # ---------Security---------------------------------------------------------------
-ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['hospitalbackend.msaadafund.com']
+
 CORS_ALLOWED_ORIGINS: True
 
 CORS_ALLOW_CREDENTIALS = True
@@ -37,6 +41,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:8000",
     "http://192.168.1.15:5173",
+    'hospitalbackend.msaadafund.com'
 ]
 CORS_ALLOW_HEADERS = [
     'content-type',
@@ -53,6 +58,7 @@ CORS_ORIGIN_WHITELIST = [
     "http://192.168.1.15:5173",
     "http://0.0.0.0:8000", 
     "http://localhost:8000",
+    'hospitalbackend.msaadafund.com'
 ]
 
 # session _key
@@ -71,6 +77,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000", 
     "http://127.0.0.1:8000",
     "http://127.0.0.1:8080",
+    'hospitalbackend.msaadafund.com'
 ]
 
 CORS_ALLOW_METHODS = [
@@ -152,14 +159,12 @@ LOGIN_URL = '/login'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT'),
-        'OPTIONS': {
-            'sslmode': 'require',  # This enforces SSL encryption
-        },
+        'NAME': tmpPostgres.path.replace('/', ''),
+        'USER': tmpPostgres.username,
+        'PASSWORD': tmpPostgres.password,
+        'HOST': tmpPostgres.hostname,
+        'PORT': 5432,
+        'OPTIONS': dict(parse_qsl(tmpPostgres.query)),
     }
 }
 
