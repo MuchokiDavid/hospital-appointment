@@ -110,7 +110,7 @@ cd hospital_appointment/
 python3 manage.py createsuperuser
 ```
 **2. Deployment**
-- For the deployed version, access admin via [https://hospitalbackend.msaadafund.com/admin](https://hospital-appointment-tvid.onrender.com/admin/)
+- For the deployed version, access admin via [https://hospitalbackend.msaadafund.com/admin](https://hospitalbackend.msaadafund.com/admin/)
 
 ```bash
 #Credentials
