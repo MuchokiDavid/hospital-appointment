@@ -110,7 +110,7 @@ cd hospital_appointment/
 python3 manage.py createsuperuser
 ```
 **2. Deployment**
-- For the deployed version, access admin via [https://hospital-appointment-tvid.onrender.com/admin](https://hospital-appointment-tvid.onrender.com/admin/)
+- For the deployed version, access admin via [https://hospitalbackend.msaadafund.com/admin](https://hospital-appointment-tvid.onrender.com/admin/)
 
 ```bash
 #Credentials
@@ -144,8 +144,8 @@ We provide comprehensive interactive documentation for all API endpoints:
 
 | Documentation Type | URL |
 |--------------------|-----|
-| **Swagger UI** (Interactive) | [https://hospital-appointment-tvid.onrender.com/swagger](https://hospital-appointment-tvid.onrender.com/swagger/) |
-| **ReDoc** (Alternative) | [https://hospital-appointment-tvid.onrender.com/documentation](https://hospital-appointment-tvid.onrender.com/documentation/) |
+| **Swagger UI** (Interactive) | [https://hospitalbackend.msaadafund.com/swagger](https://hospital-appointment-tvid.onrender.com/swagger/) |
+| **ReDoc** (Alternative) | [https://hospitalbackend.msaadafund.com/documentation](https://hospital-appointment-tvid.onrender.com/documentation/) |
 
 **Features:**
 - Try-it-out functionality for testing endpoints
@@ -171,4 +171,4 @@ Project Maintainer - [David Muchoki](mailto:dmmuchoki7@gmail.com)
 
 Project Link: [https://github.com/MuchokiDavid/hospital-appointment](https://github.com/MuchokiDavid/hospital-appointment)
 
-Deployment Link: [https://hospital-appointment-tvid.onrender.com](https://hospital-appointment-tvid.onrender.com/)
+Deployment Link: [https://hospitalbackend.msaadafund.com](https://hospital-appointment-tvid.onrender.com/)
