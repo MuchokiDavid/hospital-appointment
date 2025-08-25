@@ -144,8 +144,8 @@ We provide comprehensive interactive documentation for all API endpoints:
 
 | Documentation Type | URL |
 |--------------------|-----|
-| **Swagger UI** (Interactive) | [https://hospitalbackend.msaadafund.com/swagger](https://hospital-appointment-tvid.onrender.com/swagger/) |
-| **ReDoc** (Alternative) | [https://hospitalbackend.msaadafund.com/documentation](https://hospital-appointment-tvid.onrender.com/documentation/) |
+| **Swagger UI** (Interactive) | [https://hospitalbackend.msaadafund.com/swagger](https://hospitalbackend.msaadafund.com/swagger/) |
+| **ReDoc** (Alternative) | [https://hospitalbackend.msaadafund.com/documentation](https://hospitalbackend.msaadafund.com/documentation/) |
 
 **Features:**
 - Try-it-out functionality for testing endpoints
@@ -171,4 +171,4 @@ Project Maintainer - [David Muchoki](mailto:dmmuchoki7@gmail.com)
 
 Project Link: [https://github.com/MuchokiDavid/hospital-appointment](https://github.com/MuchokiDavid/hospital-appointment)
 
-Deployment Link: [https://hospitalbackend.msaadafund.com](https://hospital-appointment-tvid.onrender.com/)
+Deployment Link: [https://hospitalbackend.msaadafund.com](https://hospitalbackend.msaadafund.com/)
